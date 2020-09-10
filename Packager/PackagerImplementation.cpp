@@ -19,6 +19,8 @@
  
 #include "PackagerImplementation.h"
 
+#include "PackagerExUtils.h"
+
 #if defined (DO_NOT_USE_DEPRECATED_API)
 #include <opkg_cmd.h>
 #else
@@ -118,14 +120,22 @@ namespace Plugin {
     PackagerImplementation::~PackagerImplementation()
     {
         FreeOPKG();
+
+#ifdef USE_THREAD_POOL
+      PackagerExUtils::klllThreadQ(this);
+#endif
+
+        TermPackageDB();
     }
 
     void PackagerImplementation::Register(Exchange::IPackager::INotification* notification)
     {
         ASSERT(notification);
         _adminLock.Lock();
-        notification->AddRef();
+
         _notifications.push_back(notification);
+        notification->AddRef();
+
         if (_inProgress.Install != nullptr) {
             ASSERT(_inProgress.Package != nullptr);
             notification->StateChange(_inProgress.Package, _inProgress.Install);
@@ -298,6 +308,32 @@ namespace Plugin {
         _adminLock.Unlock();
     }
 
+    // void PackagerImplementation::NotifyRelayEvent(std::string event)
+    // {
+    //     LOGERR("DEBUG:  NotifyRelayEvent() - ENTER" );
+
+    //     _adminLock.Lock();
+    //     _isSyncing = false;
+    //     for (auto* notification : _notifications)
+    //     {
+    //         notification->RelayEvent(event);
+    //     }
+    //     _adminLock.Unlock();
+
+    //     // LOGERR("DEBUG:  NotifyRelayEvent() - EXIT" );
+    // }
+
+    void PackagerImplementation::NotifyIntallStep(Exchange::IPackager::state status, uint32_t task /*= 0*/, string id /* = "" */, int32_t code /*= 0*/)
+    {
+        _adminLock.Lock();
+        _isSyncing = false;
+        for (auto* notification : _notifications)
+        {
+            notification->IntallStep(status, task, id, code);
+        }
+        _adminLock.Unlock();
+    }
+
     bool PackagerImplementation::InitOPKG()
     {
         UpdateConfig();
@@ -348,6 +384,5 @@ namespace Plugin {
             NotifyRepoSynced(result);
         }
     }
-
 }  // namespace Plugin
 }  // namespace WPEFramework

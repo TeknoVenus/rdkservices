@@ -23,7 +23,12 @@ find_package(WPEFramework)
 # are located in the cmake directory. Include it in the search.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
-include(services.cmake)
+ if(BUILD_VAGRANT) 
+    # DO NOTHING FOR NOW 
+ else()
+    # include(services.cmake) 
+ endif() 
+ 
 
 option(PLUGIN_PACKAGER "Include Packager plugin" OFF)
 option(PLUGIN_DISPLAYSETTINGS "Include DisplaySettings plugin" ON)
