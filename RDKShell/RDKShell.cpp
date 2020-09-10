@@ -65,6 +65,7 @@ const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_ENABLE_INACTIVITY_R
 const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SET_INACTIVITY_INTERVAL = "setInactivityInterval";
 const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SCALE_TO_FIT = "scaleToFit";
 const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_LAUNCH = "launch";
+const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_LAUNCH_APP = "launchApplication";
 const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SUSPEND = "suspend";
 const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_DESTROY = "destroy";
 const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_AVAILABLE_TYPES = "getAvailableTypes";
@@ -356,6 +357,18 @@ namespace WPEFramework {
             Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:9998")));
             std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> > thunderClient = make_shared<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> >(callsign.c_str(), "");
             return thunderClient;
+        }
+
+        std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> RDKShell::getPackagerPlugin()
+        {
+            Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:9998")));
+            return make_shared<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>>("Packager.1", "");
+        }
+
+        std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> RDKShell::getOCIContainerPlugin()
+        {
+            Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:9998")));
+            return make_shared<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>>("OCIContainer.1", "");
         }
 
         void RDKShell::getSecurityToken(std::string& token)
@@ -1942,6 +1955,144 @@ namespace WPEFramework {
             if (!result)
             {
                 response["message"] = "failed to destroy application";
+            }
+            returnResponse(result);
+        }
+
+        // TODO:: Added this back for DAC support, but it was removed before? WHY??
+        uint32_t RDKShell::launchApplicationWrapper(const JsonObject& parameters, JsonObject& response)
+        {
+            LOGINFOMETHOD();
+            bool result = true;
+            if (!parameters.HasLabel("client"))
+            {
+                result = false;
+                response["message"] = "please specify client";
+            }
+            if (!parameters.HasLabel("uri"))
+            {
+                result = false;
+                response["message"] = "please specify uri";
+            }
+            if (!parameters.HasLabel("mimeType"))
+            {
+                result = false;
+                response["message"] = "please specify mimeType";
+            }
+            if (result)
+            {
+                const string client = parameters["client"].String();
+                const string uri = parameters["uri"].String();
+                const string mimeType = parameters["mimeType"].String();
+
+                // TODO:: Define this as constant in RDKShell
+                if (mimeType ==  "application/dac.native")
+                {
+                    // Got a DAC app. Get the info from Packager
+                    LOGINFO("Starting DAC app");
+
+                    auto packagerPlugin = getPackagerPlugin();
+
+                    if (!packagerPlugin)
+                    {
+                        response["message"] = "Packager plugin not available";
+                        returnResponse(false);
+                    }
+
+                    LOGINFO("Got Packager plugin!");
+
+                    // See if the app is actually installed
+
+                    JsonObject installParams;
+                    JsonObject installResult;
+
+                    installParams.Set("id", uri.c_str());
+                    if (packagerPlugin->Invoke<JsonObject, JsonObject>(1000, "isInstalled", installParams, installResult) < 0)
+                    {
+                        response["message"] = "could not determine app install status";
+                        returnResponse(false);
+                    }
+
+                    string strResult;
+                    installResult.ToString(strResult);
+
+                    LOGINFO("IsInstalled returned %s", strResult);
+
+                    if (!installResult.Get("available").Boolean())
+                    {
+                        response["message"] = "Packager reports app is not installed";
+                        returnResponse(false);
+                    }
+
+                    // App is installed, find the bundle location
+
+                    JsonObject infoParams;
+                    JsonObject infoResult;
+
+                    infoParams.Set("id", uri.c_str());
+                    if (packagerPlugin->Invoke<JsonObject, JsonObject>(1000, "getPackageInfo", infoParams, infoResult) < 0)
+                    {
+                        response["message"] = "could not determine app bundle info";
+                        returnResponse(false);
+                    }
+
+                    infoResult.ToString(strResult);
+                    LOGINFO("getPackageInfo returned %s", strResult);
+
+                    string bundlePath = infoResult.Get("bundlePath").String();
+
+                    LOGINFO("Bundle is %s", bundlePath.c_str());
+
+                    // We know where the app lives and are ready to start it,
+                    // create a display with rdkshell
+
+                    if (!createDisplay(client, uri))
+                    {
+                        response["message"] = "Could not create display";
+                        returnResponse(false);
+                    }
+
+                    string runtimeDir = getenv("XDG_RUNTIME_DIR");
+                    string display = runtimeDir + "/" + uri;
+
+                    LOGINFO("Runtime dir is %s", runtimeDir.c_str());
+                    LOGINFO("Display is %s", display.c_str());
+
+                    // Start container
+
+                    auto ociContainerPlugin = getOCIContainerPlugin();
+
+                    JsonObject result;
+                    JsonObject param;
+
+                    param["containerId"] = uri;
+                    param["bundlePath"] = bundlePath;
+                    param["westerosSocket"] = display;
+
+                    if (ociContainerPlugin->Invoke<JsonObject, JsonObject>(2000, "startContainer", param, result) < 0)
+                    {
+                        response["message"] = "could not start container";
+                        returnResponse(false);
+                    }
+
+                }
+                else if (mimeType == RDKSHELL_APPLICATION_MIME_TYPE_NATIVE)
+                {
+                    gRdkShellMutex.lock();
+                    result = CompositorController::launchApplication(client, uri, mimeType);
+                    gRdkShellMutex.unlock();
+
+                    if (!result)
+                    {
+                        response["message"] = "failed to launch application";
+                    }
+                }
+                else
+                {
+                    result = false;
+                    response["message"] = "Unsupported MIME type";
+                }
+
             }
             returnResponse(result);
         }

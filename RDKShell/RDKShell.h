@@ -79,6 +79,7 @@ namespace WPEFramework {
             static const string RDKSHELL_METHOD_SET_INACTIVITY_INTERVAL;
             static const string RDKSHELL_METHOD_SCALE_TO_FIT;
             static const string RDKSHELL_METHOD_LAUNCH;
+            static const string RDKSHELL_METHOD_LAUNCH_APP;
             static const string RDKSHELL_METHOD_SUSPEND;
             static const string RDKSHELL_METHOD_DESTROY;
             static const string RDKSHELL_METHOD_GET_AVAILABLE_TYPES;
@@ -141,6 +142,8 @@ namespace WPEFramework {
             uint32_t launchWrapper(const JsonObject& parameters, JsonObject& response);
             uint32_t suspendWrapper(const JsonObject& parameters, JsonObject& response);
             uint32_t destroyWrapper(const JsonObject& parameters, JsonObject& response);
+            uint32_t launchApplicationWrapper(const JsonObject& parameters, JsonObject& response);
+            uint32_t destroyApplicationWrapper(const JsonObject& parameters, JsonObject& response);
             uint32_t getAvailableTypesWrapper(const JsonObject& parameters, JsonObject& response);
             uint32_t getState(const JsonObject& parameters, JsonObject& response);
             uint32_t getSystemMemoryWrapper(const JsonObject& parameters, JsonObject& response);
@@ -188,6 +191,9 @@ namespace WPEFramework {
             bool pluginMemoryUsage(const string callsign, JsonArray& memoryInfo);
 
             static std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> > getThunderControllerClient(std::string callsign="");
+            static std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> > getPackagerPlugin();
+            static std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement> > getOCIContainerPlugin();
+
             static void getSecurityToken(std::string& token);
             static bool isThunderSecurityConfigured();
 
