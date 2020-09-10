@@ -26,7 +26,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
  if(BUILD_VAGRANT) 
     # DO NOTHING FOR NOW 
  else()
-    # include(services.cmake) 
+    include(services.cmake) 
  endif() 
  
 
