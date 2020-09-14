@@ -2014,10 +2014,18 @@ namespace WPEFramework {
                         returnResponse(false);
                     }
 
+                    if (!installResult["success"].Boolean())
+                    {
+                        response["message"] = "isInstalled request was not successfull";
+                        returnResponse(false);
+                    }
+
+                    // ----- DEBUG ----------
                     string strResult;
                     installResult.ToString(strResult);
 
-                    LOGINFO("IsInstalled returned %s", strResult);
+                    LOGINFO("IsInstalled returned %s", strResult.c_str());
+                    // ----- DEBUG ----------
 
                     if (!installResult.Get("available").Boolean())
                     {
@@ -2026,7 +2034,6 @@ namespace WPEFramework {
                     }
 
                     // App is installed, find the bundle location
-
                     JsonObject infoParams;
                     JsonObject infoResult;
 
@@ -2037,8 +2044,16 @@ namespace WPEFramework {
                         returnResponse(false);
                     }
 
+                    if (!infoResult["success"].Boolean())
+                    {
+                        response["message"] = "getPackageInfo request was not successfull";
+                        returnResponse(false);
+                    }
+
+                    // ----- DEBUG ----------
                     infoResult.ToString(strResult);
-                    LOGINFO("getPackageInfo returned %s", strResult);
+                    LOGINFO("getPackageInfo returned %s", strResult.c_str());
+                    // ----- DEBUG ----------
 
                     string bundlePath = infoResult.Get("bundlePath").String();
 
