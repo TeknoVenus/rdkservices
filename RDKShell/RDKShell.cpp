@@ -369,7 +369,7 @@ namespace WPEFramework {
         std::shared_ptr<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>> RDKShell::getOCIContainerPlugin()
         {
             Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:9998")));
-            return make_shared<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>>("OCIContainer.1", "");
+            return make_shared<WPEFramework::JSONRPC::LinkType<WPEFramework::Core::JSON::IElement>>("org.rdk.OCIContainer.1", "");
         }
 
         void RDKShell::getSecurityToken(std::string& token)
@@ -2007,18 +2007,8 @@ namespace WPEFramework {
                     JsonObject installParams;
                     JsonObject installResult;
 
-                    installParams.Set("id", uri.c_str());
-                    if (packagerPlugin->Invoke<JsonObject, JsonObject>(1000, "isInstalled", installParams, installResult) < 0)
-                    {
-                        response["message"] = "could not determine app install status";
-                        returnResponse(false);
-                    }
-
-                    if (!installResult["success"].Boolean())
-                    {
-                        response["message"] = "isInstalled request was not successfull";
-                        returnResponse(false);
-                    }
+                    installParams.Set("pkgId", uri.c_str());
+                    packagerPlugin->Invoke<JsonObject, JsonObject>(1000, "isInstalled", installParams, installResult);
 
                     // ----- DEBUG ----------
                     string strResult;
@@ -2027,7 +2017,7 @@ namespace WPEFramework {
                     LOGINFO("IsInstalled returned %s", strResult.c_str());
                     // ----- DEBUG ----------
 
-                    if (!installResult.Get("available").Boolean())
+                    if (installResult.Get("available").Number() == 0)
                     {
                         response["message"] = "Packager reports app is not installed";
                         returnResponse(false);
@@ -2037,25 +2027,15 @@ namespace WPEFramework {
                     JsonObject infoParams;
                     JsonObject infoResult;
 
-                    infoParams.Set("id", uri.c_str());
-                    if (packagerPlugin->Invoke<JsonObject, JsonObject>(1000, "getPackageInfo", infoParams, infoResult) < 0)
-                    {
-                        response["message"] = "could not determine app bundle info";
-                        returnResponse(false);
-                    }
-
-                    if (!infoResult["success"].Boolean())
-                    {
-                        response["message"] = "getPackageInfo request was not successfull";
-                        returnResponse(false);
-                    }
+                    infoParams.Set("pkgId", uri.c_str());
+                    packagerPlugin->Invoke<JsonObject, JsonObject>(1000, "getPackageInfo", infoParams, infoResult);
 
                     // ----- DEBUG ----------
                     infoResult.ToString(strResult);
                     LOGINFO("getPackageInfo returned %s", strResult.c_str());
                     // ----- DEBUG ----------
 
-                    string bundlePath = infoResult.Get("bundlePath").String();
+                    string bundlePath = infoResult["bundlePath"].String();
 
                     LOGINFO("Bundle is %s", bundlePath.c_str());
 
@@ -2078,6 +2058,12 @@ namespace WPEFramework {
 
                     auto ociContainerPlugin = getOCIContainerPlugin();
 
+                     if (!ociContainerPlugin)
+                    {
+                        response["message"] = "OCIContainer plugin not available";
+                        returnResponse(false);
+                    }
+
                     JsonObject result;
                     JsonObject param;
 
@@ -2085,9 +2071,19 @@ namespace WPEFramework {
                     param["bundlePath"] = bundlePath;
                     param["westerosSocket"] = display;
 
-                    if (ociContainerPlugin->Invoke<JsonObject, JsonObject>(2000, "startContainer", param, result) < 0)
+                    ociContainerPlugin->Invoke<JsonObject, JsonObject>(2000, "startContainer", param, result);
+
+                    // ----- DEBUG ----------
+                    result.ToString(strResult);
+                    LOGINFO("startContainer returned %s", strResult.c_str());
+                    // ----- DEBUG ----------
+
+                    if (!result["success"].Boolean())
                     {
-                        response["message"] = "could not start container";
+                        // Something went wrong starting the container, destory the display we just created
+                        kill(client);
+
+                        response["message"] = "Could not start Dobby container";
                         returnResponse(false);
                     }
 
