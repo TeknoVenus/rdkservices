@@ -25,6 +25,7 @@ find_library(LIBUUID_LIBRARY libuuid.so)
 include_directories(${LIBUUID_INCLUDE_DIR})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(libprovision QUIET)
 find_package(LibOPKG REQUIRED)
 find_package(GLIB REQUIRED)
 
@@ -49,26 +50,25 @@ add_definitions(${SQLITE_CFLAGS_OTHER} ${PLABELS_FLAGS})
 link_directories(${SQLITE_LIBRARY_DIRS})
 
 
-target_include_directories(${MODULE_NAME} PRIVATE ../helpers
-        ${SQLITE_INCLUDE_DIRS}
-        ${PLABELS_INCLUDE_DIRS}
-        ${GLIB_INCLUDE_DIRS})
-
 if (libprovision_FOUND)
+    message(">>>>>> FOUND")
     target_link_libraries(${MODULE_NAME}
         PRIVATE
             CompileSettingsDebug::CompileSettingsDebug
             ${NAMESPACE}Plugins::${NAMESPACE}Plugins
             libprovision::libprovision
             LibOPKG::LibOPKG
-            ${LIBUUID_LIBRARY}
-            ${SQLITE_LIBRARIES}
-            ${GLIB_LIBRARIES}
             )
 else (libprovision_FOUND)
+    message(">>>>>>>>>> NOT FOUND")
+    message("${LIBOPKG_LIBRARIES}")
      target_include_directories(${MODULE_NAME}
         PRIVATE
+            ../helpers
             ${LIBOPKG_INCLUDE_DIRS}
+            ${SQLITE_INCLUDE_DIRS}
+            ${PLABELS_INCLUDE_DIRS}
+            ${GLIB_INCLUDE_DIRS}
             )
 
     target_link_libraries(${MODULE_NAME}
