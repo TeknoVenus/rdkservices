@@ -696,9 +696,44 @@ namespace WPEFramework {
                 {
                     client = parameters["callsign"].String();
                 }
+
+                // Kill the display
                 result = kill(client);
                 if (false == result) {
                   response["message"] = "failed to kill client";
+                    returnResponse(false);
+                }
+
+                // ** HACKY SOLUTION FOR DEMO! **
+                // If OCIContainer reports there's a container running with the client
+                // id, kill it
+                auto ociContainerPlugin = getOCIContainerPlugin();
+
+                if (!ociContainerPlugin)
+                {
+                    response["message"] = "OCIContainer plugin not available";
+                    returnResponse(false);
+                }
+
+                JsonObject result;
+                JsonObject param;
+                param["containerId"] = client;
+
+                ociContainerPlugin->Invoke<JsonObject, JsonObject>(2000, "getContainerInfo", param, result);
+
+                // If success is false, the container isn't running so nothing to do
+                if (result["success"].Boolean())
+                {
+                    // Dobby knows about that container - what's it doing?
+                    if (result["state"] == "Running" || result["state"] == "Starting")
+                    {
+                        ociContainerPlugin->Invoke<JsonObject, JsonObject>(2000, "stopContainer", param, result);
+
+                        if (!result["success"].Boolean())
+                        {
+                            result["message"] = "Failed to stop container";
+                        }
+                    }
                 }
             }
             returnResponse(result);
@@ -2058,7 +2093,7 @@ namespace WPEFramework {
 
                     auto ociContainerPlugin = getOCIContainerPlugin();
 
-                     if (!ociContainerPlugin)
+                    if (!ociContainerPlugin)
                     {
                         response["message"] = "OCIContainer plugin not available";
                         returnResponse(false);
