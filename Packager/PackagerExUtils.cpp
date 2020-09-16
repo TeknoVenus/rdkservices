@@ -984,16 +984,25 @@ LOGERR(" ... Extracting >>>  '%s' ", filename);
         return DACrc_t::dac_FAIL;
       }
 
+      int read_count = 0;
       for (;;)
       {
         r = archive_read_next_header(a, &entry);
         if (r == ARCHIVE_EOF)
         {
+          LOGERR(" %s r: %d ", archive_error_string(a), r);
+
+          if(read_count == 0)
+          {
+            LOGERR(" .. Next Header ... Empty / Bad file > ARCHIVE_EOF\n");
+            return DACrc_t::dac_FAIL;
+          }
+
           break; // complete
         }
         if (r < ARCHIVE_OK)
         {
-            LOGERR(" %s ", archive_error_string(a));
+            LOGERR("r < ARCHIVE_OK ... %s   r: %d", archive_error_string(a), r);
         }
 
         if (r < ARCHIVE_WARN)
@@ -1011,6 +1020,8 @@ LOGERR(" ... Extracting >>>  '%s' ", filename);
 
 //          LOGINFO(" EXTRACT >>>  entry: %s", targetFilepath.c_str());
         }
+
+        read_count++;
 
         r = archive_write_header(ext, entry);
         if (r < ARCHIVE_OK)
@@ -1179,20 +1190,31 @@ LOGERR(" ... Extracting >>>  '%s' ", filename);
 
           if(!fp)
           {
-            LOGINFO("... download: '%s' ... as '%s'  - FAILED  (disk full ?) \n", url, tempName);
+            LOGERR("... download: '%s' ... as '%s'  - FAILED  (disk full ?) \n", url, tempName);
             return rc;
           }
 
           curl_easy_setopt(curl, CURLOPT_URL, url);
           curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
           curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+          curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
+          curl_easy_setopt(curl, CURLOPT_FAILONERROR, true);
           curl_easy_setopt(curl, CURLOPT_USERAGENT, "Packager/1.0");
           
           res = curl_easy_perform(curl);
+
           if(res == CURLE_OK)
           {
-              rc = DACrc_t::dac_OK;
-              /// queue download for install
+              LOGERR("... download: '%s' ... as '%s'  - OK \n", url, tempName);
+
+              rc = DACrc_t::dac_OK;  // SUCCESS
+
+              // queue download for install
+          }
+          else
+          {
+            LOGERR("... download: '%s' ... as '%s'  - FAILED  (Not found ?) \n", url, tempName);
+            return rc;
           }
 
           curl_easy_cleanup(curl);

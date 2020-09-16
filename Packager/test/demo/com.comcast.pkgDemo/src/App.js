@@ -36,36 +36,13 @@ export default class App extends Lightning.Component
     let RR = Lightning.shaders.RoundedRectangle;
     let IMG = Utils.asset('images/logo.png');
 
-    console.log("IMG >>>>>  " + IMG)
+    //console.log("IMG >>>>>  " + IMG)
     var ui = {
       Background: {
         w: 1920,
         h: 1080,
         color: 0xff8888aa,
         src: Utils.asset('images/background1.png'),
-      },
-
-      ConsoleBG:
-      {
-        mountX: 0.5, //mountY: 1.0,
-        w: 1040,
-        h: 600,
-        x: 1920/2, y: 420, rect: true,
-        alpha: 0.0,
-        color: 0x4F888888, // #8888884f
-        // colorTop: 0xFF636EFB, colorBottom: 0xFF1C27bC,
-
-        Console: {
-
-          x: 10, y: 10,
-          w: 1040,
-          //h: 500,
-          text: {
-            fontFace: 'Regular',
-            fontSize: 18,
-            textColor: 0xbbffffff,
-          },
-        },
       },
 
       Title: {
@@ -89,7 +66,7 @@ export default class App extends Lightning.Component
 
       PackagesList:
       {
-        mountX: 0.5, x: 1920/2, y: 120, w: 1000, h: 225, flex: {direction: 'row', padding: 25, wrap: true}, rect: true, rtt: true, shader: { radius: 20, type: RR}, color: 0x4F888888,
+        mountX: 0.5, x: 1920/2, y: 150, w: 1150, /*h: 225,*/ flex: {direction: 'row', padding: 45, wrap: true}, rect: true, rtt: true, shader: { radius: 20, type: RR}, color: 0x4F888888,
 
         // Available PACKAGES from Inventory ... injected here
 
@@ -98,7 +75,7 @@ export default class App extends Lightning.Component
 
       HelpTip1:
       {
-        mountX: 0.0, x: 1980 * 0.25, y: 397,
+        mountX: 0.0, x: 1980 * 0.25, y: 120, //397,
         text: {
           text: "Use  (A)ll or (I)nfo for package metadata",
           textAlign: 'right',
@@ -116,7 +93,7 @@ export default class App extends Lightning.Component
 
       HelpTip2:
       {
-        mountX: 1.0, x: 1980 * 0.72, y: 397,
+        mountX: 1.0, x: 1980 * 0.72, y: 120, //397,
         text: {
           text: "Use  UP/DN  arrow keys for Console",
           textAlign: 'right',
@@ -134,7 +111,7 @@ export default class App extends Lightning.Component
 
       SpaceLeft:
       {
-        x: 1240, y: 130,
+        x: 1240, y: 160,
         text: {
           text: "Space Remaining: 0 Kb",
           textAlign: 'right',
@@ -148,7 +125,30 @@ export default class App extends Lightning.Component
           shadowOffsetY: 2,
           shadowBlur: 8,
         },
+
       },
+
+      ConsoleBG:
+      {
+        mountX: 0.5, //mountY: 1.0,
+        x: 1920/2, y: 150, w: 1240,
+        h: 600, rect: true,
+        alpha: 0.0, shader: { radius: 20, type: RR },
+        color: 0xcc222222, // #222222ee
+        // colorTop: 0xFF636EFB, colorBottom: 0xFF1C27bC,
+
+        Console: {
+
+          x: 10, y: 10,
+          w: 1160,
+          //h: 500,
+          text: {
+            fontFace: 'Regular',
+            fontSize: 18,
+            textColor: 0xFFffffff,
+          },
+        },
+      }, // ConsoleBG
 
       // InfoButton: {
       //   w: 60,
@@ -291,19 +291,54 @@ export default class App extends Lightning.Component
 
     progress.setProgress(0); // reset
 
-    let handler = (notification) =>
+    let handleFailure = (notification, str) =>
+    {
+      let pid = pkg_id;
+
+      console.log("FAILURE >> '"+str+"' ... notification = " + JSON.stringify(notification) )
+
+//      var taskId = notification.task;
+      var  pkgId = notification.pkgId;
+
+      if(pkgId == pid)
+      {
+        button.setIcon(Utils.asset('images/x_mark.png'))
+
+        progress.setSmooth('alpha', 0, {duration: 1.3});
+
+        setTimeout( () =>
+        {
+          button.setIcon(Utils.asset('images/x_mark.png'))
+
+          progress.setProgress(0); //reset
+
+          this.getAvailableSpace()
+
+        }, 1.2 * 1000); //ms
+
+        this.setConsole( beautify(notification, null, 2, 100) )
+      }
+    }
+
+    let handleFailureDownload     = (notification) => { handleFailure(notification,'FailureDownload')     };
+    let handleFailureDecryption   = (notification) => { handleFailure(notification,'FailureDecryption')   };
+    let handleFailureExtraction   = (notification) => { handleFailure(notification,'FailureExtraction')   };
+    let handleFailureVerification = (notification) => { handleFailure(notification,'FailureVerification') };
+    let handleFailureInstall      = (notification) => { handleFailure(notification,'FailureInstall')      };
+
+    let handleProgress = (notification) =>
     {
       let pid = pkg_id;
 
       console.log("HANDLER >>  notification = " + JSON.stringify(notification) )
 
-      var taskId = notification.task;
+//      var taskId = notification.task;
       var  pkgId = notification.pkgId;
 
       if(pkgId == pid)
       {
         let pc = notification.status / 8.0;
-        console.log("New pc = " + pc);
+        // console.log("New pc = " + pc);
 
         progress.setProgress(pc);
 
@@ -315,6 +350,8 @@ export default class App extends Lightning.Component
           {
             button.setIcon(Utils.asset('images/check_mark.png'))
 
+            progress.setProgress(0); //reset
+
             this.getAvailableSpace()
 
           }, 2.2 * 1000); //ms
@@ -322,14 +359,21 @@ export default class App extends Lightning.Component
       }
     }
 
-    let hh1 = await this.handleEvent('Packager', 'onDownloadCommence', handler);
-    let hh2 = await this.handleEvent('Packager', 'onDownloadComplete', handler);
+    let hh1 = await this.handleEvent('Packager', 'onDownloadCommence', handleProgress);
+    let hh2 = await this.handleEvent('Packager', 'onDownloadComplete', handleProgress);
 
-    let hh3 = await this.handleEvent('Packager', 'onExtractCommence',  handler);
-    let hh4 = await this.handleEvent('Packager', 'onExtractComplete',  handler);
+    let hh3 = await this.handleEvent('Packager', 'onExtractCommence',  handleProgress);
+    let hh4 = await this.handleEvent('Packager', 'onExtractComplete',  handleProgress);
 
-    let hh5 = await this.handleEvent('Packager', 'onInstallCommence',  handler);
-    let hh6 = await this.handleEvent('Packager', 'onInstallComplete',  handler);
+    let hh5 = await this.handleEvent('Packager', 'onInstallCommence',  handleProgress);
+    let hh6 = await this.handleEvent('Packager', 'onInstallComplete',  handleProgress);
+
+
+    let hh7 = await this.handleEvent('Packager', 'onDownload_FAILED',     handleFailureDownload);
+    let hh8 = await this.handleEvent('Packager', 'onDecryption_FAILED',   handleFailureDecryption);
+    let hh9 = await this.handleEvent('Packager', 'onExtraction_FAILED',   handleFailureExtraction);
+    let hhA = await this.handleEvent('Packager', 'onVerification_FAILED', handleFailureVerification);
+    let hhB = await this.handleEvent('Packager', 'onInstall_FAILED',      handleFailureInstall);
   }
 
   async removePkg(pkg_id)
@@ -419,7 +463,7 @@ export default class App extends Lightning.Component
 
             _handleRight()
             {
-              if(++this.buttonIndex > 3) this.buttonIndex = 3;
+              if(++this.buttonIndex > Inventory.length) this.buttonIndex = Inventory.length;
             }
 
             _handleBack()

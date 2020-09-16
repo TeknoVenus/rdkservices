@@ -19,15 +19,17 @@
 
 
 
- // JUNK
- // JUNK
- // JUNK
- #define JUNK_MS   200
-
- #define JUNK_SLEEP_MS(ms) { std::this_thread::sleep_for(std::chrono::milliseconds( (ms) )); }
- // JUNK
- // JUNK
- // JUNK
+// JUNK
+// JUNK
+// JUNK
+#ifdef DEBUG
+  #define JUNK_SLEEP_MS(ms) { std::this_thread::sleep_for(std::chrono::milliseconds( (ms) )); }
+#else
+  #define JUNK_SLEEP_MS(ms)  // noop
+#endif
+// JUNK
+// JUNK
+// JUNK
 
 #include <glib.h>
 
@@ -293,6 +295,7 @@ JUNK_SLEEP_MS(200);
     if(PackagerExUtils::downloadURL(install_url.c_str(), download_name) != PackagerExUtils::DACrc_t::dac_OK)
     {
       NotifyIntallStep(Exchange::IPackager::DOWNLOAD_FAILED, 0, pkgId, -5);
+JUNK_SLEEP_MS(200);
 
       LOGERR(" ... DOWNLOAD (%s)>>>  FAILED\n", install_url.c_str());
       return 55; // FAIL
@@ -302,7 +305,7 @@ JUNK_SLEEP_MS(200);
         NotifyIntallStep(Exchange::IPackager::DOWNLOADED, taskId, pkgId);
  JUNK_SLEEP_MS(200);
 
-        NotifyIntallStep(Exchange::IPackager::VERIFYING, taskId, pkgId);
+        NotifyIntallStep(Exchange::IPackager::VERIFYING, taskId, pkgId);  // aka "onExtractCommence"
 JUNK_SLEEP_MS(200);
 
         // Get UUID ...
@@ -319,7 +322,7 @@ JUNK_SLEEP_MS(200);
           //
           LOGERR(" ... EXTRACT >>>  FAILED\n");
 
-          NotifyIntallStep(Exchange::IPackager::EXTRACTION_FAILED, 0, pkgId, -1);
+          NotifyIntallStep(Exchange::IPackager::EXTRACTION_FAILED, taskId, pkgId, -1);
 
           PackagerExUtils::fileRemove(download_name); // Always cleanup
           PackagerExUtils::removeFolder(uuid_path);   // Remove debris

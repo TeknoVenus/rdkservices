@@ -18,7 +18,7 @@ export default class TileButton extends lng.Component {
           {
             RRect:
             {
-              w: 150, h: 120, rtt: true, rect: true, alpha: 0.8, color: frameClr, shader: { radius: 20, type: RR, stroke: stroke, strokeColor: strokeClr},
+              w: 190, h: 120, rtt: true, rect: true, alpha: 0.8, color: frameClr, shader: { radius: 20, type: RR, stroke: stroke, strokeColor: strokeClr},
 
               Image: {
                 mountX: 0.5,
