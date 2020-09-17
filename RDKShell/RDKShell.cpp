@@ -67,6 +67,8 @@ const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SCALE_TO_FIT = "sca
 const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_LAUNCH = "launch";
 const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_LAUNCH_APP = "launchApplication";
 const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SUSPEND = "suspend";
+const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_SUSPEND_APP = "suspendApplication";
+const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_RESUME_APP = "resumeApplication";
 const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_DESTROY = "destroy";
 const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_AVAILABLE_TYPES = "getAvailableTypes";
 const string WPEFramework::Plugin::RDKShell::RDKSHELL_METHOD_GET_STATE = "getState";
@@ -253,6 +255,8 @@ namespace WPEFramework {
             registerMethod(RDKSHELL_METHOD_LAUNCH, &RDKShell::launchWrapper, this);
             registerMethod(RDKSHELL_METHOD_LAUNCH_APP, &RDKShell::launchApplicationWrapper, this);
             registerMethod(RDKSHELL_METHOD_SUSPEND, &RDKShell::suspendWrapper, this);
+            registerMethod(RDKSHELL_METHOD_SUSPEND_APP, &RDKShell::suspendApplicationWrapper, this);
+            registerMethod(RDKSHELL_METHOD_RESUME_APP, &RDKShell::resumeApplicationWrapper, this);
             registerMethod(RDKSHELL_METHOD_DESTROY, &RDKShell::destroyWrapper, this);
             registerMethod(RDKSHELL_METHOD_GET_AVAILABLE_TYPES, &RDKShell::getAvailableTypesWrapper, this);
             registerMethod(RDKSHELL_METHOD_GET_STATE, &RDKShell::getState, this);
@@ -2089,6 +2093,23 @@ namespace WPEFramework {
                     LOGINFO("Runtime dir is %s", runtimeDir.c_str());
                     LOGINFO("Display is %s", display.c_str());
 
+                    std::string testMime;
+
+                    gRdkShellMutex.lock();
+                    LOGINFO("Setting %s MIME type to %s...", client.c_str(), mimeType.c_str());
+                    result = CompositorController::setMimeType(client, mimeType);
+                    LOGINFO("Getting MIME type");
+                    result = CompositorController::getMimeType(client, testMime);
+                    LOGINFO("Got mime type of %s", testMime.c_str());
+                    gRdkShellMutex.unlock();
+
+                    // Set mime type
+                    if (!setMimeType(client, mimeType))
+                    {
+                        LOGWARN("Failed to set mime type - non fatal...");
+                    }
+
+
                     // Start container
 
                     auto ociContainerPlugin = getOCIContainerPlugin();
@@ -2099,21 +2120,21 @@ namespace WPEFramework {
                         returnResponse(false);
                     }
 
-                    JsonObject result;
+                    JsonObject ociContainerResult;
                     JsonObject param;
 
                     param["containerId"] = uri;
                     param["bundlePath"] = bundlePath;
                     param["westerosSocket"] = display;
 
-                    ociContainerPlugin->Invoke<JsonObject, JsonObject>(2000, "startContainer", param, result);
+                    ociContainerPlugin->Invoke<JsonObject, JsonObject>(2000, "startContainer", param, ociContainerResult);
 
                     // ----- DEBUG ----------
-                    result.ToString(strResult);
+                    ociContainerResult.ToString(strResult);
                     LOGINFO("startContainer returned %s", strResult.c_str());
                     // ----- DEBUG ----------
 
-                    if (!result["success"].Boolean())
+                    if (!ociContainerResult["success"].Boolean())
                     {
                         // Something went wrong starting the container, destory the display we just created
                         kill(client);
@@ -2140,6 +2161,141 @@ namespace WPEFramework {
                     response["message"] = "Unsupported MIME type";
                 }
 
+            }
+            returnResponse(result);
+        }
+
+        uint32_t RDKShell::suspendApplicationWrapper(const JsonObject& parameters, JsonObject& response)
+        {
+            LOGINFOMETHOD();
+            bool result = true;
+            if (!parameters.HasLabel("client"))
+            {
+                result = false;
+                response["message"] = "please specify client";
+            }
+            if (result)
+            {
+                const string client = parameters["client"].String();
+                std::string mimeType = "foo";
+
+                gRdkShellMutex.lock();
+                result = CompositorController::getMimeType(client, mimeType);
+                gRdkShellMutex.unlock();
+
+                if (mimeType == RDKSHELL_APPLICATION_MIME_TYPE_NATIVE)
+                {
+                    gRdkShellMutex.lock();
+                    result = CompositorController::suspendApplication(client);
+                    gRdkShellMutex.unlock();
+                }
+                else if (mimeType ==  "application/dac.native")
+                {
+                    // DAC App.
+                    // First, pause the container with Dobby
+                    LOGINFO("Suspending DAC app");
+
+                    auto ociContainerPlugin = getOCIContainerPlugin();
+
+                    if (!ociContainerPlugin)
+                    {
+                        response["message"] = "OCIContainer plugin not available";
+                        returnResponse(false);
+                    }
+
+                    JsonObject ociContainerResult;
+                    JsonObject param;
+                    param["containerId"] = client;
+
+                    ociContainerPlugin->Invoke<JsonObject, JsonObject>(2000, "pauseContainer", param, ociContainerResult);
+
+                    if (!ociContainerResult["success"].Boolean())
+                    {
+                        response["message"] = "Could not pause container";
+                        returnResponse(false);
+                    }
+                }
+                else
+                {
+                    response["message"] = "Unsupported mime type";
+                    returnResponse(false);
+                }
+
+                // Make the application hidden
+                setVisibility(client, false);
+
+                if (!result)
+                {
+                    response["message"] = "failed to suspend application";
+                }
+            }
+            returnResponse(result);
+        }
+
+        uint32_t RDKShell::resumeApplicationWrapper(const JsonObject& parameters, JsonObject& response)
+        {
+            LOGINFOMETHOD();
+            bool result = true;
+            if (!parameters.HasLabel("client"))
+            {
+                result = false;
+                response["message"] = "please specify client";
+            }
+            if (result)
+            {
+                const string client = parameters["client"].String();
+                std::string mimeType;
+
+                gRdkShellMutex.lock();
+                result = CompositorController::getMimeType(client, mimeType);
+                gRdkShellMutex.unlock();
+
+                LOGINFO("Mime type is %s", mimeType.c_str());
+
+                if (mimeType == RDKSHELL_APPLICATION_MIME_TYPE_NATIVE)
+                {
+                    gRdkShellMutex.lock();
+                    result = CompositorController::resumeApplication(client);
+                    gRdkShellMutex.unlock();
+                }
+                else if (mimeType ==  "application/dac.native")
+                {
+                    // DAC App.
+                    // First, pause the container with Dobby
+                    auto ociContainerPlugin = getOCIContainerPlugin();
+
+                    if (!ociContainerPlugin)
+                    {
+                        response["message"] = "OCIContainer plugin not available";
+                        returnResponse(false);
+                    }
+
+                    JsonObject ociContainerResult;
+                    JsonObject param;
+
+                    param["containerId"] = client;
+
+                    ociContainerPlugin->Invoke<JsonObject, JsonObject>(2000, "resumeContainer", param, ociContainerResult);
+
+                    if (!ociContainerResult["success"].Boolean())
+                    {
+                        response["message"] = "Could not resume container";
+                        returnResponse(false);
+                    }
+                }
+                else
+                {
+                    response["message"] = "Unsupported mime type";
+                    returnResponse(false);
+                }
+
+                // Make the application visible
+                setVisibility(client, true);
+
+                if (!result)
+                {
+                    response["message"] = "failed to resume application";
+                }
             }
             returnResponse(result);
         }
@@ -2559,6 +2715,15 @@ namespace WPEFramework {
             resolutionHeight = h;
             gRdkShellMutex.unlock();
             return true;
+        }
+
+        bool RDKShell::setMimeType(const string& client, const string& mimeType)
+        {
+            bool ret = false;
+            gRdkShellMutex.lock();
+            ret = CompositorController::setMimeType(client, mimeType);
+            gRdkShellMutex.unlock();
+            return ret;
         }
 
         bool RDKShell::createDisplay(const string& client, const string& displayName)
