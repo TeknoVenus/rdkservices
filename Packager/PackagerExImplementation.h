@@ -71,14 +71,14 @@ namespace Plugin {
         {
             Core::InterlockedIncrement(_refCount);
 
-            // LOGERR("\n PackageInfoEx <<< AddRef()  - %d", _refCount);
+            // LOGINFO("\n PackageInfoEx <<< AddRef()  - %d", _refCount);
         }
 
         virtual uint32_t Release() //const
         {
             if ( Core::InterlockedDecrement(_refCount) == 0)
             {
-              LOGERR("\n PackageInfoEx <<< Release()  - DELETE");
+              LOGINFO("\n PackageInfoEx <<< Release()  - DELETE");
               delete const_cast<PackageInfoEx*>(this);
             }
             return (0);
@@ -296,7 +296,7 @@ namespace Plugin {
           // {
           //     if ( Core::InterlockedDecrement(_refCount) == 0)
           //     {
-          //       LOGERR("\n PackageInfoExIterator <<< Release()  - DELETE");
+          //       LOGINFO("\n PackageInfoExIterator <<< Release()  - DELETE");
           //       delete const_cast<PackageInfoExIterator*>(this);
           //     }
           //     return (0);

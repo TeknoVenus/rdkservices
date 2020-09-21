@@ -308,21 +308,6 @@ namespace Plugin {
         _adminLock.Unlock();
     }
 
-    // void PackagerImplementation::NotifyRelayEvent(std::string event)
-    // {
-    //     LOGERR("DEBUG:  NotifyRelayEvent() - ENTER" );
-
-    //     _adminLock.Lock();
-    //     _isSyncing = false;
-    //     for (auto* notification : _notifications)
-    //     {
-    //         notification->RelayEvent(event);
-    //     }
-    //     _adminLock.Unlock();
-
-    //     // LOGERR("DEBUG:  NotifyRelayEvent() - EXIT" );
-    // }
-
     void PackagerImplementation::NotifyIntallStep(Exchange::IPackager::state status, uint32_t task /*= 0*/, string id /* = "" */, int32_t code /*= 0*/)
     {
         _adminLock.Lock();

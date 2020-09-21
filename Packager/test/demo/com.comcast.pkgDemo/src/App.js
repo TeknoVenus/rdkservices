@@ -1,13 +1,17 @@
 import { Lightning, Utils } from 'wpe-lightning-sdk'
+
+import beautify  from 'json-beautify'
 import ThunderJS from 'ThunderJS'
+import Events    from './components/Events'
+import AppList   from "./components/AppList";
+import OkCancel  from "./components/OkCancel";
 
-import { Inventory } from "./Inventory.js";
+import { DefaultApps as inventory, DefaultApps } from "./DefaultApps.js";
 
-import beautify from 'json-beautify'
+var AvailableApps = [];
+var InstalledApps = [];
 
-import TileButton from "./components/TileButton";
-
-import OkCancel from "./components/OkCancel";
+var InstalledAppMap = {};
 
 const thunder_cfg = {
   host: '127.0.0.1',
@@ -21,9 +25,7 @@ const thunder_cfg = {
   }
 }
 
-console.log('HUGH >>> Creating ThunderJS ...')
-
-const thunderJS = ThunderJS(thunder_cfg);
+var thunderJS = null;
 
 export default class App extends Lightning.Component
 {
@@ -31,13 +33,32 @@ export default class App extends Lightning.Component
     return [{ family: 'Regular', url: Utils.asset('fonts/Roboto-Regular.ttf') }]
   }
 
-  static _template() {
-
+  static _template()
+  {
     let RR = Lightning.shaders.RoundedRectangle;
-    let IMG = Utils.asset('images/logo.png');
 
-    //console.log("IMG >>>>>  " + IMG)
-    var ui = {
+    var ui =
+    {
+      Blind1: {
+        x: 0, y: 0, w: 1920, h: 1080/2, rect: true, color: 0xff000000, zIndex: 998,
+
+        // Bg: {mountX: 0.5,
+        //   x: 1920/2, y: 1080/2, w: 600, h: 79, rect: true, color: 0xff000000, zIndex: 998,
+        // },
+
+        RDKlogo: {
+          mount: 0.5,
+          x: 1920/2,
+          y: 1080/2,
+          zIndex: 999,
+          src: Utils.asset('images/RDKLogo400x79.png'),
+        },
+      },
+      Blind2: {
+        x: 0, y: 1080/2, w: 1920, h: 1080/2, rect: true, color: 0xff000000, zIndex: 997
+      },
+
+
       Background: {
         w: 1920,
         h: 1080,
@@ -45,13 +66,14 @@ export default class App extends Lightning.Component
         src: Utils.asset('images/background1.png'),
       },
 
+
       Title: {
         mountX: 0.5,
         mountY: 0,
         x: 1920/2,
         y: 20,
         text: {
-          text: "-  Demo PKG Store  -",
+          text: "Demo Store",
           fontFace: 'Regular',
           fontSize: 70,
           textColor: 0xFFffffff,
@@ -64,59 +86,145 @@ export default class App extends Lightning.Component
         },
       },
 
-      PackagesList:
+      Lists:
       {
-        mountX: 0.5, x: 1920/2, y: 150, w: 1150, /*h: 225,*/ flex: {direction: 'row', padding: 45, wrap: true}, rect: true, rtt: true, shader: { radius: 20, type: RR}, color: 0x4F888888,
+        mountX: 0.5, x: 1920/2, y: 150, w: 1450, h: 900,
+        flex: {direction: 'column', alignItems: 'center'},
+      //	rect: false, //rtt: true, shader: { radius: 20, type: RR}, color: 0x4F888888,
+        // rect: true, color: 0x88ccccFF,
 
-        // Available PACKAGES from Inventory ... injected here
+        HelpText:
+        {
+          // rect: true, color: 0xff00ff00,
 
-      },
+          flex: {direction: 'row'},
 
+          HelpBox1:
+          {
+            w: 1450/2,
+            h: 10,
+            // rect: true, color: 0xffFF0000,
 
-      HelpTip1:
-      {
-        mountX: 0.0, x: 1980 * 0.25, y: 120, //397,
-        text: {
-          text: "Use  (A)ll or (I)nfo for package metadata",
-          textAlign: 'right',
-          fontFace: 'Regular',
-          fontSize: 16,
-          textColor: 0xFFffffff,
+            HelpTip1:
+            {
+              text:
+              {
+                w: 1450/2,
+                text: "Use  (A)ll or (I)nfo for package metadata",
+                textAlign: 'center',
+                fontFace: 'Regular',
+                fontSize: 16,
+                textColor: 0xFFffffff,
 
-          shadow: true,
-          shadowColor: 0xff000000,
-          shadowOffsetX: 2,
-          shadowOffsetY: 2,
-          shadowBlur: 8,
+                shadow: true,
+                shadowColor: 0xff000000,
+                shadowOffsetX: 2,
+                shadowOffsetY: 2,
+                shadowBlur: 8,
+              },
+            },
+          },//Box
+          HelpBox2:
+          {
+            w: 1450/2,
+            h: 10,
+            // rect: true, color: 0x88FF00FF,
+
+            HelpTip2:
+            {
+              text:
+              {
+                w: 1450/2,
+                // h: 50,
+                text: "Use  UP/DN  arrow keys for Console",
+                textAlign: 'center',
+                fontFace: 'Regular',
+                fontSize: 16,
+                textColor: 0xFFffffff,
+
+                shadow: true,
+                shadowColor: 0xff000000,
+                shadowOffsetX: 2,
+                shadowOffsetY: 2,
+                shadowBlur: 8,
+              },
+            },
+          },//Box
+        }, // HelpText
+
+        AvailableTXT: {
+          // rect: true, color: 0x88FF00FF,
+          x: 0,
+          y: 60,
+          w: 1450,
+          text: {
+            text: "AVAILABLE: ",
+
+            // highlight: true,
+            // highlightColor: 0xFF0000ff,
+
+            // textAlign: 'left',
+            fontFace: 'Regular',
+            fontSize: 30,
+            textColor: 0xFFffffff,
+
+            shadow: true,
+            shadowColor: 0xff000000,
+            shadowOffsetX: 2,
+            shadowOffsetY: 2,
+            shadowBlur: 8,
+          },
         },
-      },
 
-      HelpTip2:
-      {
-        mountX: 1.0, x: 1980 * 0.72, y: 120, //397,
-        text: {
-          text: "Use  UP/DN  arrow keys for Console",
-          textAlign: 'right',
-          fontFace: 'Regular',
-          fontSize: 16,
-          textColor: 0xFFffffff,
+        AvailableGroup:
+        {
+          mountX: 0.5, x: 1450/2, y: 0, w: 1450, h: 300, flex: {direction: 'row', padding: 15, wrap: false }, rect: true, rtt: true, shader: { radius: 20, type: RR}, color: 0x4F888888,
 
-          shadow: true,
-          shadowColor: 0xff000000,
-          shadowOffsetX: 2,
-          shadowOffsetY: 2,
-          shadowBlur: 8,
+          // Available PACKAGES from inventory ... injected here
+          AvailableList: { x: 0, type: AppList }
         },
-      },
+
+
+        InstalledTXT: {
+          // rect: true, color: 0x88FF00FF,
+          x: 0,
+          y: 160,
+          w: 1450,
+          text: {
+            text: "INSTALLED: ",
+
+            // highlight: true,
+            // highlightColor: 0xFF0000ff,
+
+            // textAlign: 'left',
+            fontFace: 'Regular',
+            fontSize: 30,
+            textColor: 0xFFffffff,
+
+            shadow: true,
+            shadowColor: 0xff000000,
+            shadowOffsetX: 2,
+            shadowOffsetY: 2,
+            shadowBlur: 8,
+          },
+        },
+        InstalledGroup:
+        {
+          mountX: 0.5, x: 1450/2, y: 100, w: 1450, h: 300, flex: {direction: 'row', padding: 15, wrap: true}, rect: true, rtt: true, shader: { radius: 20, type: RR}, color: 0x4F888888,
+
+          InstalledList: { type: AppList }
+
+        }, // InstalledGroup
+      },//Lists
 
       SpaceLeft:
       {
-        x: 1240, y: 160,
+        x: 1400, y: 600,
         text: {
-          text: "Space Remaining: 0 Kb",
+          text: "Space: 0 Kb",
           textAlign: 'right',
           fontFace: 'Regular',
-          fontSize: 18,
+          fontSize: 22,
           textColor: 0xaa00FF00,
 
           shadow: true,
@@ -130,8 +238,8 @@ export default class App extends Lightning.Component
 
       ConsoleBG:
       {
-        mountX: 0.5, //mountY: 1.0,
-        x: 1920/2, y: 150, w: 1240,
+        mountX: 0.5,
+        x: 1920/2, y: 150, w: 1450,
         h: 600, rect: true,
         alpha: 0.0, shader: { radius: 20, type: RR },
         color: 0xcc222222, // #222222ee
@@ -140,7 +248,7 @@ export default class App extends Lightning.Component
         Console: {
 
           x: 10, y: 10,
-          w: 1160,
+          w: 1450,
           //h: 500,
           text: {
             fontFace: 'Regular',
@@ -158,12 +266,10 @@ export default class App extends Lightning.Component
       // },
 
       OkCancel: { type: OkCancel, x: 1920/2, y: 400, w: 600, h: 180, alpha: 0.0 },
-    };
 
-    Inventory.map( (o, i) =>
-    {
-      ui.PackagesList[ 'Package' + i] = { pkgId: o.pkgId, type: TileButton, flexItem: {margin: 40}, w: 150, h: 80, label: o.pkgId, img: Utils.asset('images/crate2_80x80.png') }
-    } );
+      // LineH: { mountY: 0.5, x: 0, y: 1080/2, w: 1920, h: 2, rect: true, color: 0xff00FF00 },
+      // LineV: { mountX: 0.5, y: 0, x: 1920/2, h: 1080, w: 2, rect: true, color: 0xff00FF00 },
+    };
 
     return ui;
   }
@@ -173,134 +279,244 @@ export default class App extends Lightning.Component
     this.tag('Console').text.text = str;
   }
 
-  $okcClickedOk(pkg_id)
+  $onRemoveOK() // 'okButton = true' indicates the OK button was clicked
   {
-    console.log("okcClickedOk ENTER - ... info: " + pkg_id)
+    var dlg = this.tag("OkCancel");
+    var pkg_id = dlg.pkgId;
 
-    this._setState('PackagesState');
+    console.log("onRemoveOK ENTER - ... pkg_id: " + pkg_id);
 
-    let info = Inventory[this.buttonIndex];
+    if(pkg_id == undefined)
+    {
+      console.log("onRemoveOK() >>>  ERROR - ... pkg_id: " + pkg_id)
+      return;
+    }
 
-    this.removePkg(info.pkgId);
+    this.removePkg(pkg_id);
+
+    dlg.setSmooth('alpha', 0, {duration: 0.3}); // HIDE
+
+    var appButton = this.tag('InstalledList').children[this.installedButtonIndex];
+    appButton.stopWiggle();
+
+    // Enable STORE button - as it's uninstalled
+    var storeButton = this.tag('AvailableList').children.filter( (o) => { return o.info.pkgId == pkg_id; });
+
+    if(storeButton.length > 0)
+    {
+      storeButton[0].enable();
+    }
+
+    this._setState('InstalledRowState');
+}
+
+  $onRemoveCANCEL()
+  {
+    var dlg = this.tag("OkCancel");
+    var pkg_id = dlg.pkgId;
+
+    console.log("onRemoveCANCEL ENTER - ... pkg_id: " + pkg_id);
+
+    dlg.setSmooth('alpha', 0, {duration: 0.3}); // HIDE
+
+    console.log("onRemoveCANCEL ENTER - ... info: " + pkg_id)
+
+    var button = this.tag('InstalledList').children[this.installedButtonIndex];
+    button.stopWiggle();
+
+    this._setState('InstalledRowState');
   }
 
-  $okcClickedCancel(pkg_id)
+  $InstallClicked(pkg_id)
   {
-    console.log("okcClickedCancel ENTER - ... info: " + pkg_id)
+    // console.log("INSTALL >>  InstallClicked() - ENTER .. pkg_id: " + pkg_id);
 
-    this._setState('PackagesState');
+    let button = this.tag('AvailableList').children[this.storeButtonIndex];
+
+    this.isInstalled(pkg_id).then( (ans) =>
+    {
+      if( ans['available'] == "false")
+      {
+        var progress = button.tag("Progress")
+
+        progress.reset(); // reset
+        progress.setSmooth('alpha', 1, {duration: .1});
+
+        var info = button.info;
+
+        this.installPkg(pkg_id, info);
+      }
+      else
+      {
+        console.log("CALL >> this.installPkg() ALREAY have ... pkg_id: " + pkg_id)
+      }
+    });
   }
 
-  $buttonClicked(pkg_id)
+  $LaunchClicked(pkg_id)
   {
-    var info = Inventory[this.buttonIndex];
-    console.log("installPkg ENTER - ... info: " + info)
+    // console.log("$LaunchClicked() >>>  ENTER - ... pkg_id: " + pkg_id)
 
-    this.installPkg(pkg_id, info);
+    let info = InstalledAppMap[pkg_id];
+    if(info)
+    {
+      this.launchPkg(pkg_id, info);
+    }
+    else
+    {
+      console.log("$LaunchClicked() >>> Error:  NO  info: " + info)
+    }
   }
 
   async getAvailableSpace()
   {
-    var result = await thunderJS.call('Packager', 'getAvailableSpace', null);
+    try
+    {
+      var result = await thunderJS.call('Packager', 'getAvailableSpace', null);
 
-    //this.setConsole( beautify(result, null, 2, 100) )
+      this.tag('SpaceLeft').text.text = ("Space Remaining: " + result.availableSpaceInKB + " Kb");
 
-    this.tag('SpaceLeft').text.text = ("Space Remaining: " + result.availableSpaceInKB + " Kb");
+      //this.setConsole( beautify(result, null, 2, 100) )
+    }
+    catch(e)
+    {
+      this.setConsole( 'getAvailableSpace() >>> CAUGHT:  e: ' + beautify(e, null, 2, 100) );
+    }
   }
 
   async getPackageInfo(pkg_id)
   {
-    console.log('HUGH >>> Sending Request A ...')
+    try
+    {
+      let params = { "pkgId": pkg_id };
 
-    let info  = { "pkgId": pkg_id };
+      var result = await thunderJS.call('Packager', 'getPackageInfo', params);
 
-    var result = await thunderJS.call('Packager', 'getPackageInfo', info);
-
-    // console.log('Called >>  RESULT: ' + JSON.stringify(result));
-
-    // this.tag('Console').text.text = beautify(result, null, 2, 100);
-    this.setConsole( beautify(result, null, 2, 100) )
+      this.setConsole( beautify(result, null, 2, 100) )
+    }
+    catch(e)
+    {
+      this.setConsole( 'getPackageInfo() >>> CAUGHT:  e: ' +  beautify(e, null, 2, 100) );
+    }
   }
 
   async getInstalled()
   {
-    var result = await thunderJS.call('Packager', 'getInstalled', null);
+    // console.log("getInstalled() - ENTER ")
 
-    // this.tag('Console').text.text = beautify(result, null, 2, 100);
-    this.setConsole( beautify(result, null, 2, 100) )
+    try
+    {
+      var result = await thunderJS.call('Packager', 'getInstalled', null);
+
+      this.setConsole( beautify(result, null, 2, 100) )
+    }
+    catch(e)
+    {
+      this.setConsole( 'getInstalled() >>> CAUGHT:  e: ' +  beautify(e, null, 2, 100) );
+      return;
+    }
 
     this.getAvailableSpace();
 
-    if(this.tag('PackagesList').children.length > 0)
+    InstalledAppMap = {}    // reset
+    InstalledApps   = null; // reset
+
+    //
+    // NOTE:  getInstalled() returns meta with 'id' -NOT- 'pkgId'
+    //
+    result.applications.map( (o) => InstalledAppMap[o.id] = o ); // populate info
+
+    InstalledApps = result.applications; // update array
+
+    // DISABLE apps that are already installed...
+    InstalledApps.map( have =>
     {
-      this.tag('PackagesList').children.map(b =>
+      let disable = AvailableApps.filter( o => o.pkgId == have.id );
+      let dbutton = this.tag('AvailableList').children.filter( o => o.info.pkgId == disable[0].pkgId);
+
+      if(dbutton.length > 0)
       {
-        result.applications.map( installed_pkg =>
-        {
-          if(installed_pkg.id == b.pkgId)
-          {
-            b.setIcon(Utils.asset('images/check_mark.png'))
-          }
-        })
-      });
-    }//ENDIF
-  }
+        dbutton[0].disable();
+      }
+    })
 
-  async isInstalled(pkd_id)
-  {
-    console.log('HUGH >>> Sending Request IS INSTALLED ? ...' + pkg_id)
-    var result = await thunderJS.call('Packager', 'isInstalled', pkd_id);
-
-    this.setConsole( beautify(result, null, 2, 100) )
-  }
-
-
-  async handleEvent(name, event, cb = null)
-  {
-    console.log('Listen for >> ['+name+'] -> '+event+' ...');
-
-    if(cb != null)
+    // SHOW / HIDE tiles per installations
+    this.tag("InstalledList").children.map( (button, i) =>
     {
-      // console.log('Listen for ['+name+'] using CALLBACK ...');
-      return await thunderJS.on(name, event, cb);
-    }
-    else
-    {
-      return await thunderJS.on(name, event, (notification) =>
+      if(i < InstalledApps.length)
       {
-          var str = " " + event + " ...  Event" + JSON.stringify(notification);
-          console.log('Handler GOT >> ' + str)
-      })
+        InstalledApps[i].pkgInstalled = true;
+
+        button.info = InstalledApps[i];
+        button.show(i * 0.15);
+      }
+      else
+      {
+        button.info = null;
+        button.hide();
+      }
+    });
+  }
+
+  async isInstalled(pkg_id)
+  {
+    try
+    {
+      let params = { "pkgId": pkg_id };
+
+      let result = await thunderJS.call('Packager', 'isInstalled', params)
+
+//      console.log( 'DEBUG:  IsInstalled  ' + beautify(result, null, 2, 100) )
+//      this.setConsole(     'IsInstalled  ' + beautify(result, null, 2, 100) )
+
+      return result;
+    }
+    catch(e)
+    {
+      console.log('DEBUG:  isInstalled() >>> CAUGHT:  e: ' +  beautify(e, null, 2, 100) );
+      this.setConsole(    'isInstalled() >>> CAUGHT:  e: ' +  beautify(e, null, 2, 100) );
+      return false;
     }
   }
 
-  async installPkg(pkg_id, info)
+  async launchPkg(pkg_id, info)
   {
-    var result = await thunderJS.call('Packager', 'install', info);
+    let params =
+    {
+        "client": pkg_id,
+        "uri": pkg_id, //TODO:  Unexpected... check why ?
+        // "uri": info.bundlePath,
+        "mimeType": "application/dac.native"
+    }
 
-    // console.log('Called >>  RESULT: ' + JSON.stringify(result));
+    try
+    {
+      var result = await thunderJS.call('org.rdk.RDKShell.1', 'launchApplication', params);
 
-    // this.tag('Console').text.text = beautify(result, null, 2, 100);
-    this.setConsole( beautify(result, null, 2, 100) )
+      this.setConsole( beautify(result, null, 2, 100) )
+    }
+    catch(e)
+    {
+      console.log( 'launchPkg() >>> CAUGHT:  e: ' +  beautify(e, null, 2, 100) );
+      this.setConsole( 'launchPkg() >>> CAUGHT:  e: ' +  beautify(e, null, 2, 100) );
+    }
+  }
 
-    var info = Inventory[this.buttonIndex];
+  async installPkg(thisPkgId, info)
+  {
+    var myEvents = new Events(thunderJS, thisPkgId);
 
-    let buttons  = this.tag('PackagesList').children
-    let button   = buttons[this.buttonIndex];
+    let buttons  = this.tag('AvailableList').children
+    let button   = buttons[this.storeButtonIndex];
     let progress = button.tag('Progress')
 
-    progress.setProgress(0); // reset
+    progress.reset(); // reset
 
     let handleFailure = (notification, str) =>
     {
-      let pid = pkg_id;
-
       console.log("FAILURE >> '"+str+"' ... notification = " + JSON.stringify(notification) )
 
-//      var taskId = notification.task;
-      var  pkgId = notification.pkgId;
-
-      if(pkgId == pid)
+      if(thisPkgId == notification.pkgId)
       {
         button.setIcon(Utils.asset('images/x_mark.png'))
 
@@ -310,7 +526,7 @@ export default class App extends Lightning.Component
         {
           button.setIcon(Utils.asset('images/x_mark.png'))
 
-          progress.setProgress(0); //reset
+          progress.reset(); // reset
 
           this.getAvailableSpace()
 
@@ -328,207 +544,405 @@ export default class App extends Lightning.Component
 
     let handleProgress = (notification) =>
     {
-      let pid = pkg_id;
+      // console.log("HANDLER >> pkgId: "+thisPkgId+" ... notification = " + JSON.stringify(notification) );
 
-      console.log("HANDLER >>  notification = " + JSON.stringify(notification) )
-
-//      var taskId = notification.task;
-      var  pkgId = notification.pkgId;
-
-      if(pkgId == pid)
+      if(thisPkgId == notification.pkgId)
       {
         let pc = notification.status / 8.0;
-        // console.log("New pc = " + pc);
-
         progress.setProgress(pc);
+
+        // console.log("HANDLER >> pkgId: "+thisPkgId+" ... progress = " + pc );
 
         if(pc == 1.0)
         {
           progress.setSmooth('alpha', 0, {duration: 2.3});
 
-          setTimeout( () =>
+          var ans = AvailableApps.filter( (o) => { return o.pkgId == notification.pkgId; });
+
+          if(ans.length == 1) // IGNORE OTHER NOTTIFICATIONS
           {
-            button.setIcon(Utils.asset('images/check_mark.png'))
+            var info = ans[0];
+            this.onPkgInstalled(info, button)
 
-            progress.setProgress(0); //reset
-
-            this.getAvailableSpace()
-
-          }, 2.2 * 1000); //ms
-        }
+            if(info.events)
+            {
+              info.events.disposeAll(); // remove event handlers
+              info.events = null;
+            }
+          }
+        }//ENDIF - 100%
       }
     }
 
-    let hh1 = await this.handleEvent('Packager', 'onDownloadCommence', handleProgress);
-    let hh2 = await this.handleEvent('Packager', 'onDownloadComplete', handleProgress);
+    {
+      myEvents.add( 'Packager', 'onDownloadCommence', handleProgress);
+      myEvents.add( 'Packager', 'onDownloadComplete', handleProgress);
 
-    let hh3 = await this.handleEvent('Packager', 'onExtractCommence',  handleProgress);
-    let hh4 = await this.handleEvent('Packager', 'onExtractComplete',  handleProgress);
+      myEvents.add( 'Packager', 'onExtractCommence',  handleProgress);
+      myEvents.add( 'Packager', 'onExtractComplete',  handleProgress);
 
-    let hh5 = await this.handleEvent('Packager', 'onInstallCommence',  handleProgress);
-    let hh6 = await this.handleEvent('Packager', 'onInstallComplete',  handleProgress);
+      myEvents.add( 'Packager', 'onInstallCommence',  handleProgress);
+      myEvents.add( 'Packager', 'onInstallComplete',  handleProgress);
 
+      myEvents.add( 'Packager', 'onDownload_FAILED',     handleFailureDownload,) ;
+      myEvents.add( 'Packager', 'onDecryption_FAILED',   handleFailureDecryption) ;
+      myEvents.add( 'Packager', 'onExtraction_FAILED',   handleFailureExtraction) ;
+      myEvents.add( 'Packager', 'onVerification_FAILED', handleFailureVerification);
+      myEvents.add( 'Packager', 'onInstall_FAILED',      handleFailureInstall);
+    }
 
-    let hh7 = await this.handleEvent('Packager', 'onDownload_FAILED',     handleFailureDownload);
-    let hh8 = await this.handleEvent('Packager', 'onDecryption_FAILED',   handleFailureDecryption);
-    let hh9 = await this.handleEvent('Packager', 'onExtraction_FAILED',   handleFailureExtraction);
-    let hhA = await this.handleEvent('Packager', 'onVerification_FAILED', handleFailureVerification);
-    let hhB = await this.handleEvent('Packager', 'onInstall_FAILED',      handleFailureInstall);
+    try
+    {
+      var result = await thunderJS.call('Packager', 'install', info);
+
+      this.setConsole( beautify(result, null, 2, 100) )
+    }
+    catch(e)
+    {
+      this.setConsole( 'installPkg() >>> CAUGHT:  e: ' +  beautify(e, null, 2, 100) );
+    }
+
+    info.events = myEvents
   }
 
   async removePkg(pkg_id)
   {
-    console.log("removePkg ENTER - ... pkg_id: " + pkg_id)
+    console.log("removePkg() >>>    ENTER - ... pkg_id: " + pkg_id)
+
+    if(pkg_id == undefined)
+    {
+      console.log("removePkg() >>>  ERROR - ... pkg_id: " + pkg_id)
+      return;
+    }
 
     var params = {
       "pkgId": pkg_id
     }
 
-    var result = await thunderJS.call('Packager', 'remove', params);
+    try
+    {
+      var result = await thunderJS.call('Packager', 'remove', params);
 
-    console.log('Called >> Remove() ... RESULT: ' + JSON.stringify(result));
-    this.setConsole( beautify(result, null, 2, 100) )
+      this.setConsole( beautify(result, null, 2, 100) )
+    }
+    catch(e)
+    {
+      this.setConsole( 'removePkg() >>> CAUGHT:  e: ' +  beautify(e, null, 2, 100) );
+    }
 
-    let buttons  = this.tag('PackagesList').children
-    let button   = buttons[this.buttonIndex];
+    // Update the Installed
+    //
+    this.getAvailableSpace()
+    this.getInstalled();
+  }
 
-    button.setIcon(Utils.asset('images/download3.png'))
+  onPkgInstalled(info, storeButton)
+  {
+    // console.log('onPkgInstalled() ... Installed >>> ' + info.pkgId)
+
+    info.pkgInstalled = true;
+
+    InstalledApps.push( info )
+    InstalledAppMap[info.pkgId] = info; // populate
+
+    this.tag('InstalledList').addTile(InstalledApps.length - 1, info)
+
+    // Disable STORE button - as it's uninstalled
+    storeButton.disable();
 
     this.getAvailableSpace()
   }
 
   _init()
   {
-    this.tag('Background')
-      .animation({
-        duration: 1,
-        repeat: -1,
-        actions: [
-          {
-            t: '',
-            p: 'color',
-            v: { 0: { v: 0xfffbb03b }, 0.5: { v: 0xfff46730 }, 0.8: { v: 0xfffbb03b } },
-          },
-        ],
-      })
-     // .start()
+    this.storeButtonIndex     = 0;
+    this.installedButtonIndex = 0;
 
-      this.buttonIndex = 0
+    this.tag('Background').on('txLoaded', () =>
+    {
+      this._setState('IntroState');
+    });
+  }
 
-      // Set FOCUS to 1st package
-      //
-      if(this.tag('PackagesList').children.length >0)
-      {
-        this.tag('PackagesList').children[0].setFocus = true;
-      }
+  handleToggleConsole()
+  {
+    let a = this.tag("ConsoleBG").alpha;
+    this.tag("ConsoleBG").setSmooth('alpha', (a == 1) ? 0 : 1, {duration: 0.3});
+  }
 
-      this.tag('PackagesList').children.map(b =>
-      {
-        b.setIcon(Utils.asset('images/download3.png'))
-      });
+  handleGetInfoALL()
+  {
+    this.getInstalled();
+  }
 
-      this.getInstalled()
+  handleGetInfo()
+  {
+    let info = InstalledApps[this.storeButtonIndex];
 
-      this._setState('PackagesState')
+    this.getPackageInfo(info.pkgId || info.id);
+  }
+
+  // GLOBAL key handling
+  _handleKey(k)
+  {
+    switch( k.keyCode )
+    {
+      case 65:  // 'A' key on keyboard
+      case 403: // 'A' key on remote
+          this.handleGetInfoALL();
+          break;
+
+      case 67:  // 'C' key on keyboard
+      case 405: // 'C' key on remote
+          this.handleToggleConsole();
+          break;
+
+      case 73:   // 'I' key on keyboard
+                 // 'INFO' key on remote
+          this.handleGetInfo();
+          break;
+
+      default:
+        //console.log("GOT key code: " + k.keyCode)
+          break;
+    }
+
+    return true;
   }
 
   static _states(){
     return [
-
-          // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-          class PackagesState extends this
+          class IntroState extends this
           {
             $enter()
             {
-              console.log("HANDLE PackagesState    this.buttonIndex : " + this.buttonIndex )
+              // console.log(">>>>>>>>>>>>   STATE:  IntroState");
 
               var dlg = this.tag("OkCancel");
-              dlg.setSmooth('alpha', 0, {duration: 0.3});
-            }
+              dlg.setSmooth('alpha', 0, {duration: 0.0});
 
-            _handleUp()
-            {
-              this.tag("ConsoleBG").setSmooth('alpha', 0, {duration: 0.3});
-            }
+              let h1 =  (1080 + 79); // Move LOWER blind to below bottom (offscreen)
+              let h2 = -(h1/2 + 79); // Move UPPER blins to above top    (offscreen)
 
-            _handleDown()
-            {
-              this.tag("ConsoleBG").setSmooth('alpha', 1, {duration: 0.3});
-            }
-
-            _handleLeft()
-            {
-              if(--this.buttonIndex < 0) this.buttonIndex = 0;
-            }
-
-            _handleRight()
-            {
-              if(++this.buttonIndex > Inventory.length) this.buttonIndex = Inventory.length;
-            }
-
-            _handleBack()
-            {
-              this._setState('OKCStateEnter')
-            }
-
-            handleGetInfoALL()
-            {
-              console.log("GOT handleGetInfoALL() - ENTER")
-              this.getInstalled();
-            }
-
-            handleGetInfo()
-            {
-              console.log("GOT handleGetInfo() - ENTER")
-
-              var info = Inventory[this.buttonIndex];
-
-              this.getPackageInfo(info.pkgId);
-            }
-
-            _handleKey(k)
-            {
-              switch( k.keyCode )
+              const anim = this.tag('RDKlogo').animation(
               {
-                case 65: this.handleGetInfoALL(); break;  // 'A' key
-                case 73: this.handleGetInfo();    break;  // 'I' key
-                default:
-                  console.log("GOT key code: " + k.keyCode)
-                    break;
+                duration: 0.5,  delay: 1.5,
+                actions: [ { p: 'alpha', v: { 0: 1.0, 0.5: 0.75, 1: 0.0 } } ]
+              });
+
+              anim.on('finish', ()=>
+              {
+                this.tag('Blind1' ).setSmooth('y', h2, { delay: 0.25, duration: 0.75 });
+                this.tag('Blind2' ).setSmooth('y', h1, { delay: 0.25, duration: 0.75 });
+
+                this._setState('SetupState');
+              });
+
+              anim.start();
+            }
+          },
+          class SetupState extends this
+          {
+            fetchAppList(url)
+            {
+              // Fetch App List
+              //
+              fetch(url)
+              .then(res => res.json())
+              .then((apps) =>
+              {
+                apps.map( (o) => o.pkgInstalled = false); //default
+
+                AvailableApps = apps;
+                InstalledApps = apps;
+
+                this.tag("AvailableList").tiles = AvailableApps;
+                this.tag("InstalledList").tiles = InstalledApps;
+
+                this._setState('StoreRowState')
+              })
+              .catch(err =>
+              {
+                console.log("Failed to get URL: " + url);
+
+                AvailableApps = DefaultApps;
+
+                console.log("... using DefaultApps");
+
+                this.tag("AvailableList").tiles = AvailableApps;
+
+                this._setState('StoreRowState')
+              });
+            }
+
+            fetchThunderCfg(url)
+            {
+              // Fetch Thunder Cfg
+              //
+              fetch(url)
+              .then( res => res.json())
+              .then((cfg) =>
+              {
+                console.log(' >>> Creating CUSTOM ThunderJS ...')
+                thunderJS = ThunderJS(cfg);
+
+                this.getInstalled(); // <<< needs THUNDER
+              })
+              .catch(err =>
+              {
+                console.log("Failed to get URL: " + url);
+
+                console.log(' >>> Creating DEFAULT ThunderJS ...')
+                thunderJS = ThunderJS(thunder_cfg);
+
+                this.getInstalled();
+
+                console.log("... using default Thunder cfg.");
+              });
+            }
+
+            $enter()
+            {
+              // console.log(">>>>>>>>>>>>   STATE:  SetupState");
+
+              const URL_PARAMS = new window.URLSearchParams(window.location.search)
+              var appURL       = URL_PARAMS.get('appList')
+              var cfgURL       = URL_PARAMS.get('thunderCfg')
+
+              this.fetchThunderCfg(cfgURL);
+              this.fetchAppList(appURL);
+
+              // State advanced within 'fetchAppList()' above.
+            }
+          },  //CLASS - SetupState
+          // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          class StoreRowState extends this
+          {
+            $enter()
+            {
+              // console.log(">>>>>>>>>>>>   STATE:  StoreRowState");
+
+              // Set FOCUS to 1st package
+              //
+              var av_children = this.tag('AvailableList').children
+              if(av_children.length >0)
+              {
+                av_children[this.storeButtonIndex].setFocus = true;
               }
 
-              return true;
+              av_children.map( (o,n) => o.show(n * 0.15) );
             }
 
             _handleEnter()
             {
-              progress.setSmooth('alpha', 1, {duration: .1});
+              let info   = AvailableApps[this.storeButtonIndex];
+              let button = this.tag('AvailableList').children[this.storeButtonIndex];
 
-              this.fireAncestors('$buttonClicked', this.pkgId);
+              if(info == undefined)
+              {
+                return // ignore
+              }
+
+              if(button.isEnabled() == false)
+              {
+                return // IGNORE CLICK
+              }
+
+              console.log("FIRE >>> INSTALL   pkgId:" + info.pkgId)
+
+              button.fireAncestors('$InstallClicked', info.pkgId);
+            }
+
+            _handleDown()
+            {
+              this._setState('InstalledRowState');
+            }
+
+            _handleLeft()
+            {
+              if(--this.storeButtonIndex < 0) this.storeButtonIndex = 0;
+            }
+
+            _handleRight()
+            {
+              if(++this.storeButtonIndex > AvailableApps.length) this.storeButtonIndex = AvailableApps.length;
             }
 
             _getFocused()
             {
-             //console.log("HANDLE _getFocused >>  OBJ: " + this.tag('PackagesList').children)
-
-              return this.tag('PackagesList').children[this.buttonIndex]
+              return this.tag('AvailableList').children[this.storeButtonIndex]
             }
-
         }, //CLASS
+
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        class InstalledRowState extends this
+        {
+          $enter()
+          {
+            // console.log(">>>>>>>>>>>>   STATE:  InstalledRowState");
+          }
+
+          _handleUp()
+          {
+            this._setState('StoreRowState');
+          }
+
+          _handleLeft()
+          {
+            if(--this.installedButtonIndex < 0) this.installedButtonIndex = 0;
+          }
+
+          _handleRight()
+          {
+            if(++this.installedButtonIndex > InstalledApps.length - 1) this.installedButtonIndex = InstalledApps.length - 1;
+          }
+
+          _handleEnter()
+          {
+            let info   = InstalledApps[this.installedButtonIndex];
+            let button = this.tag('InstalledList').children[this.installedButtonIndex];
+
+            console.log("FIRE >>> LAUNCH   pkgId:" + info.pkgId)
+
+            button.fireAncestors('$LaunchClicked', info.pkgId);
+            button.clickAnim();
+          }
+
+          _handleBack()
+          {
+            this._setState('OKCStateEnter')
+          }
+
+          _getFocused()
+          {
+            return this.tag('InstalledList').children[this.installedButtonIndex]
+          }
+        },//class
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         class OKCStateEnter extends this
         {
           $enter()
           {
-            console.log("HANDLE OKC " )
+            // console.log(">>>>>>>>>>>>   STATE:  OKCStateEnter");
 
-            var pkgId = this.tag('PackagesList').children[this.buttonIndex].pkgId;
+            var button = this.tag('InstalledList').children[this.installedButtonIndex]
 
-            var dlg = this.tag("OkCancel");
+            if(button == undefined || button.info == undefined)
+            {
+              console.error(  'BUTTON index:' + this.installedButtonIndex +'  - NOT FOUND')
+              this.setConsole('BUTTON index:' + this.installedButtonIndex +'  - NOT FOUND');
+              return;
+            }
+            var pkgId = button.info.pkgId;
+
+            button.startWiggle();
+
+            var dlg    = this.tag("OkCancel");
+            dlg.pkgId  = pkgId; // needed later
+            dlg.button = button;
 
             dlg.setLabel("Remove '" + pkgId + "' app ?");
             dlg.setSmooth('alpha', 1, {duration: 0.3});
-           // dlg.setFocus = true;
 
             dlg._setState('OKCState')
           }
@@ -539,7 +953,7 @@ export default class App extends Lightning.Component
 
             return dlg;
           }
-        }
+        },
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       ]
   }//_states

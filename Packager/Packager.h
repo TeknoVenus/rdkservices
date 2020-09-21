@@ -158,8 +158,8 @@ namespace {
             {                 
                 uint32_t rc = this->_implementation->Remove(params.PkgId.Value(), params.Listener.Value());
 
-                response["task"]   = (rc > 0) ? std::to_string( rc ) : "Remove Failed";
-                response["result"] = (rc > 0);
+                response["task"]   = 123; // TODO ... (rc > 0) ? std::to_string( rc ) : "Remove Failed";
+                response["result"] = (rc > 0) ? "false" : "true"; // '0' is success
 
                 return rc;
             });
@@ -181,8 +181,9 @@ namespace {
             Register<Params, JsonObject>(kDAC_IsInstalledMethodName, [this](const Params& params, JsonObject& response) -> uint32_t
             {
                 uint32_t result = Core::ERROR_NONE;
+                uint32_t ans    = this->_implementation->IsInstalled(params.PkgId.Value());
 
-                response["available"] = this->_implementation->IsInstalled(params.PkgId.Value());
+                response["available"] = ans ? "true" : "false";
 
                 return result;
             });
@@ -195,7 +196,7 @@ namespace {
 
                 uint32_t pc = this->_implementation->GetInstallProgress(params.Task.Value());
                 
-                LOGERR("\nHUGH >>>>> Call ... DAC::GetInstallProgress()   pc: [%d]", pc); 
+                LOGINFO(" >>>>> Call ... DAC::GetInstallProgress()   pc: [%d]", pc); 
 
                 response["percentage"] =  std::to_string(pc);
 
@@ -207,6 +208,8 @@ namespace {
             //
             Register<void, JsonObject>(kDAC_GetInstalledMethodName, [this](JsonObject& response) -> uint32_t
             {
+                LOGINFO(" >>>>> Call ... DAC::GetInstalled() "); 
+
                 Exchange::IPackager::IPackageInfoEx::IIterator *iter = this->_implementation->GetInstalled();
 
                 JsonArray list; // installed packages
@@ -252,7 +255,7 @@ namespace {
 
                 if(pkg) // Found
                 {
-                    LOGERR("Packager::GetPackageInfo >> LAMBDA - App: '%s'   - FOUND", params.PkgId.Value().c_str());
+                    LOGINFO("Packager::GetPackageInfo >> LAMBDA - App: '%s'   - FOUND", params.PkgId.Value().c_str());
 
                     response = PackageInfoEx::pkg2json( pkg );
 

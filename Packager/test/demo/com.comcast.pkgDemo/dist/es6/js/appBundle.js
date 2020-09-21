@@ -3,7 +3,7 @@
  * SDK version: 2.5.0
  * CLI version: 1.7.4
  *
- * Generated: Thu, 10 Sep 2020 18:48:13 GMT
+ * Generated: Fri, 18 Sep 2020 18:37:37 GMT
  */
 
 var APP_com_comcast_pkgDemo = (function () {
@@ -2960,6 +2960,236 @@ var APP_com_comcast_pkgDemo = (function () {
 	  return ApplicationInstance
 	};
 
+	var rx_escapable = /[\\\"\u0000-\u001f\u007f-\u009f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
+
+	var gap,
+	    indent,
+	    meta = { // table of character substitutions
+	      '\b': '\\b',
+	      '\t': '\\t',
+	      '\n': '\\n',
+	      '\f': '\\f',
+	      '\r': '\\r',
+	      '"': '\\"',
+	      '\\': '\\\\'
+	    },
+	    rep;
+
+	function quote(string) {
+
+	// If the string contains no control characters, no quote characters, and no
+	// backslash characters, then we can safely slap some quotes around it.
+	// Otherwise we must also replace the offending characters with safe escape
+	// sequences.
+
+	    rx_escapable.lastIndex = 0;
+	    return rx_escapable.test(string)
+	        ? '"' + string.replace(rx_escapable, function (a) {
+	            var c = meta[a];
+	            return typeof c === 'string'
+	                ? c
+	                : '\\u' + ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
+	        }) + '"'
+	        : '"' + string + '"';
+	}
+
+
+	function str(key, holder, limit) {
+
+	// Produce a string from holder[key].
+
+	    var i,          // The loop counter.
+	        k,          // The member key.
+	        v,          // The member value.
+	        length,
+	        mind = gap,
+	        partial,
+	        value = holder[key];
+
+	// If the value has a toJSON method, call it to obtain a replacement value.
+
+	    if (value && typeof value === 'object' &&
+	            typeof value.toJSON === 'function') {
+	        value = value.toJSON(key);
+	    }
+
+	// If we were called with a replacer function, then call the replacer to
+	// obtain a replacement value.
+
+	    if (typeof rep === 'function') {
+	        value = rep.call(holder, key, value);
+	    }
+
+	// What happens next depends on the value's type.
+
+	    switch (typeof value) {
+	    case 'string':
+	        return quote(value);
+
+	    case 'number':
+
+	// JSON numbers must be finite. Encode non-finite numbers as null.
+
+	        return isFinite(value)
+	            ? String(value)
+	            : 'null';
+
+	    case 'boolean':
+	    case 'null':
+
+	// If the value is a boolean or null, convert it to a string. Note:
+	// typeof null does not produce 'null'. The case is included here in
+	// the remote chance that this gets fixed someday.
+
+	        return String(value);
+
+	// If the type is 'object', we might be dealing with an object or an array or
+	// null.
+
+	    case 'object':
+
+	// Due to a specification blunder in ECMAScript, typeof null is 'object',
+	// so watch out for that case.
+
+	        if (!value) {
+	            return 'null';
+	        }
+
+	// Make an array to hold the partial results of stringifying this object value.
+
+	        gap += indent;
+	        partial = [];
+
+	// Is the value an array?
+
+	        if (Object.prototype.toString.apply(value) === '[object Array]') {
+
+	// The value is an array. Stringify every element. Use null as a placeholder
+	// for non-JSON values.
+
+	            length = value.length;
+	            for (i = 0; i < length; i += 1) {
+	                partial[i] = str(i, value, limit) || 'null';
+	            }
+
+	// Join all of the elements together, separated with commas, and wrap them in
+	// brackets.
+
+	            v = partial.length === 0
+	                ? '[]'
+	                : gap
+	                    ? (
+	                      gap.length + partial.join(', ').length + 4 > limit ?
+	                      '[\n' + gap + partial.join(',\n' + gap) + '\n' + mind + ']' :
+	                      '[ ' + partial.join(', ') + ' ]'
+	                    )
+	                    : '[' + partial.join(',') + ']';
+	            gap = mind;
+	            return v;
+	        }
+
+	// If the replacer is an array, use it to select the members to be stringified.
+
+	        if (rep && typeof rep === 'object') {
+	            length = rep.length;
+	            for (i = 0; i < length; i += 1) {
+	                if (typeof rep[i] === 'string') {
+	                    k = rep[i];
+	                    v = str(k, value, limit);
+	                    if (v) {
+	                        partial.push(quote(k) + (
+	                            gap
+	                                ? ': '
+	                                : ':'
+	                        ) + v);
+	                    }
+	                }
+	            }
+	        } else {
+
+	// Otherwise, iterate through all of the keys in the object.
+
+	            for (k in value) {
+	                if (Object.prototype.hasOwnProperty.call(value, k)) {
+	                    v = str(k, value, limit);
+	                    if (v) {
+	                        partial.push(quote(k) + (
+	                            gap
+	                                ? ': '
+	                                : ':'
+	                        ) + v);
+	                    }
+	                }
+	            }
+	        }
+
+	// Join all of the member texts together, separated with commas,
+	// and wrap them in braces.
+
+	        v = partial.length === 0
+	            ? '{}'
+	            : gap
+	                ? (
+	                  gap.length + partial.join(', ').length + 4 > limit ?
+	                  '{\n' + gap + partial.join(',\n' + gap) + '\n' + mind + '}' :
+	                  '{ ' + partial.join(', ') + ' }'
+	                )
+	                : '{' + partial.join(',') + '}';
+	        gap = mind;
+	        return v;
+	    }
+	}
+
+
+	function beautify (value, replacer, space, limit) {
+
+	// The stringify method takes a value and an optional replacer, and an optional
+	// space parameter, and returns a JSON text. The replacer can be a function
+	// that can replace values, or an array of strings that will select the keys.
+	// A default replacer method can be provided. Use of the space parameter can
+	// produce text that is more easily readable.
+
+	  var i;
+	  gap = '';
+	  indent = '';
+
+	  if (!limit) limit = 0;
+
+	  if (typeof limit !== "number")
+	    throw new Error("beaufifier: limit must be a number");
+
+	// If the space parameter is a number, make an indent string containing that
+	// many spaces.
+
+	  if (typeof space === 'number') {
+	      for (i = 0; i < space; i += 1) {
+	          indent += ' ';
+	      }
+
+	// If the space parameter is a string, it will be used as the indent string.
+
+	  } else if (typeof space === 'string') {
+	      indent = space;
+	  }
+
+	// If there is a replacer, it must be a function or an array.
+	// Otherwise, throw an error.
+
+	  rep = replacer;
+	  if (replacer && typeof replacer !== 'function' &&
+	          (typeof replacer !== 'object' ||
+	          typeof replacer.length !== 'number')) {
+	      throw new Error('beautifier: wrong replacer parameter');
+	  }
+
+	// Make a fake root object containing our value under the key of ''.
+	// Return the result of stringifying the value.
+
+	  return str('', {'': value}, limit);
+	}
+
+	var jsonBeautify = beautify;
+
 	/**
 	 * If not stated otherwise in this file or this component's LICENSE file the
 	 * following copyright and licenses apply:
@@ -3230,7 +3460,7 @@ var APP_com_comcast_pkgDemo = (function () {
 	};
 
 	let api;
-	var thunderJS = options => {
+	var thunderJS$1 = options => {
 	  if (
 	    options.token === undefined &&
 	    typeof window !== 'undefined' &&
@@ -3336,291 +3566,63 @@ var APP_com_comcast_pkgDemo = (function () {
 	  })
 	};
 
-	const Inventory =
-	[
+	class Events
+	{
+	  constructor(tt = null, pkdId)
 	  {
-	    "pkgId": "TestApp1",
-	    "type": "non-OCI",
-	    "url": "http://10.0.2.15/testApp1.json",
-	    "token": "TODO: Security",
-	    "listener": "TODO: url or endpoint of event listener provided by caller"
-	  },
-
-	  {
-	    "pkgId": "TestApp2",
-	    "type": "non-OCI",
-	    "url": "http://10.0.2.15/testApp2.tgz",
-	    "token": "TODO: Security",
-	    "listener": "TODO: url or endpoint of event listener provided by caller"
-	  },
-
-	  {
-	    "pkgId": "TestApp3",
-	    "type": "non-OCI",
-	    "url": "http://10.0.2.15/testApp3.tgz",
-	    "token": "TODO: Security",
-	    "listener": "TODO: url or endpoint of event listener provided by caller"
-	  },
-
-	  {
-	    "pkgId": "TestAppMissing1",
-	    "type": "non-OCI",
-	    "url": "http://10.0.2.15/testAppMissing1.json",
-	    "token": "TODO: Security",
-	    "listener": "TODO: url or endpoint of event listener provided by caller"
-	  },
-
-	  {
-	    "pkgId": "TestAppMissing2",
-	    "type": "non-OCI",
-	    "url": "http://10.0.2.15/testAppMissing2.tgz",
-	    "token": "TODO: Security",
-	    "listener": "TODO: url or endpoint of event listener provided by caller"
-	  },
-
-	  {
-	    "pkgId": "TestAppBroken",
-	    "type": "non-OCI",
-	    "url": "http://10.0.2.15/test_BAD_DUMMY_file.tgz",
-	    "token": "TODO: Security",
-	    "listener": "TODO: url or endpoint of event listener provided by caller"
-	  }
-	];
-
-	var rx_escapable = /[\\\"\u0000-\u001f\u007f-\u009f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
-
-	var gap,
-	    indent,
-	    meta = { // table of character substitutions
-	      '\b': '\\b',
-	      '\t': '\\t',
-	      '\n': '\\n',
-	      '\f': '\\f',
-	      '\r': '\\r',
-	      '"': '\\"',
-	      '\\': '\\\\'
-	    },
-	    rep;
-
-	function quote(string) {
-
-	// If the string contains no control characters, no quote characters, and no
-	// backslash characters, then we can safely slap some quotes around it.
-	// Otherwise we must also replace the offending characters with safe escape
-	// sequences.
-
-	    rx_escapable.lastIndex = 0;
-	    return rx_escapable.test(string)
-	        ? '"' + string.replace(rx_escapable, function (a) {
-	            var c = meta[a];
-	            return typeof c === 'string'
-	                ? c
-	                : '\\u' + ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
-	        }) + '"'
-	        : '"' + string + '"';
-	}
-
-
-	function str(key, holder, limit) {
-
-	// Produce a string from holder[key].
-
-	    var i,          // The loop counter.
-	        k,          // The member key.
-	        v,          // The member value.
-	        length,
-	        mind = gap,
-	        partial,
-	        value = holder[key];
-
-	// If the value has a toJSON method, call it to obtain a replacement value.
-
-	    if (value && typeof value === 'object' &&
-	            typeof value.toJSON === 'function') {
-	        value = value.toJSON(key);
+	    if(tt == null)
+	    {
+	      throw "No Thunder !";
 	    }
 
-	// If we were called with a replacer function, then call the replacer to
-	// obtain a replacement value.
-
-	    if (typeof rep === 'function') {
-	        value = rep.call(holder, key, value);
-	    }
-
-	// What happens next depends on the value's type.
-
-	    switch (typeof value) {
-	    case 'string':
-	        return quote(value);
-
-	    case 'number':
-
-	// JSON numbers must be finite. Encode non-finite numbers as null.
-
-	        return isFinite(value)
-	            ? String(value)
-	            : 'null';
-
-	    case 'boolean':
-	    case 'null':
-
-	// If the value is a boolean or null, convert it to a string. Note:
-	// typeof null does not produce 'null'. The case is included here in
-	// the remote chance that this gets fixed someday.
-
-	        return String(value);
-
-	// If the type is 'object', we might be dealing with an object or an array or
-	// null.
-
-	    case 'object':
-
-	// Due to a specification blunder in ECMAScript, typeof null is 'object',
-	// so watch out for that case.
-
-	        if (!value) {
-	            return 'null';
-	        }
-
-	// Make an array to hold the partial results of stringifying this object value.
-
-	        gap += indent;
-	        partial = [];
-
-	// Is the value an array?
-
-	        if (Object.prototype.toString.apply(value) === '[object Array]') {
-
-	// The value is an array. Stringify every element. Use null as a placeholder
-	// for non-JSON values.
-
-	            length = value.length;
-	            for (i = 0; i < length; i += 1) {
-	                partial[i] = str(i, value, limit) || 'null';
-	            }
-
-	// Join all of the elements together, separated with commas, and wrap them in
-	// brackets.
-
-	            v = partial.length === 0
-	                ? '[]'
-	                : gap
-	                    ? (
-	                      gap.length + partial.join(', ').length + 4 > limit ?
-	                      '[\n' + gap + partial.join(',\n' + gap) + '\n' + mind + ']' :
-	                      '[ ' + partial.join(', ') + ' ]'
-	                    )
-	                    : '[' + partial.join(',') + ']';
-	            gap = mind;
-	            return v;
-	        }
-
-	// If the replacer is an array, use it to select the members to be stringified.
-
-	        if (rep && typeof rep === 'object') {
-	            length = rep.length;
-	            for (i = 0; i < length; i += 1) {
-	                if (typeof rep[i] === 'string') {
-	                    k = rep[i];
-	                    v = str(k, value, limit);
-	                    if (v) {
-	                        partial.push(quote(k) + (
-	                            gap
-	                                ? ': '
-	                                : ':'
-	                        ) + v);
-	                    }
-	                }
-	            }
-	        } else {
-
-	// Otherwise, iterate through all of the keys in the object.
-
-	            for (k in value) {
-	                if (Object.prototype.hasOwnProperty.call(value, k)) {
-	                    v = str(k, value, limit);
-	                    if (v) {
-	                        partial.push(quote(k) + (
-	                            gap
-	                                ? ': '
-	                                : ':'
-	                        ) + v);
-	                    }
-	                }
-	            }
-	        }
-
-	// Join all of the member texts together, separated with commas,
-	// and wrap them in braces.
-
-	        v = partial.length === 0
-	            ? '{}'
-	            : gap
-	                ? (
-	                  gap.length + partial.join(', ').length + 4 > limit ?
-	                  '{\n' + gap + partial.join(',\n' + gap) + '\n' + mind + '}' :
-	                  '{ ' + partial.join(', ') + ' }'
-	                )
-	                : '{' + partial.join(',') + '}';
-	        gap = mind;
-	        return v;
-	    }
-	}
-
-
-	function beautify (value, replacer, space, limit) {
-
-	// The stringify method takes a value and an optional replacer, and an optional
-	// space parameter, and returns a JSON text. The replacer can be a function
-	// that can replace values, or an array of strings that will select the keys.
-	// A default replacer method can be provided. Use of the space parameter can
-	// produce text that is more easily readable.
-
-	  var i;
-	  gap = '';
-	  indent = '';
-
-	  if (!limit) limit = 0;
-
-	  if (typeof limit !== "number")
-	    throw new Error("beaufifier: limit must be a number");
-
-	// If the space parameter is a number, make an indent string containing that
-	// many spaces.
-
-	  if (typeof space === 'number') {
-	      for (i = 0; i < space; i += 1) {
-	          indent += ' ';
-	      }
-
-	// If the space parameter is a string, it will be used as the indent string.
-
-	  } else if (typeof space === 'string') {
-	      indent = space;
+	    this.thunderJS = tt;
+	    this.pkdId     = pkdId;
+	    this.events    = [];
 	  }
 
-	// If there is a replacer, it must be a function or an array.
-	// Otherwise, throw an error.
+	  async add(plugin, event, cb = null)
+	  {
+	    if( (plugin == null || plugin == "") &&
+	        (event  == null || event  == "") )
+	    {
+	      throw "No plugin/event !";
+	    }
 
-	  rep = replacer;
-	  if (replacer && typeof replacer !== 'function' &&
-	          (typeof replacer !== 'object' ||
-	          typeof replacer.length !== 'number')) {
-	      throw new Error('beautifier: wrong replacer parameter');
+	    this.events.push( await this.handleEvent(plugin, event, cb) );
 	  }
 
-	// Make a fake root object containing our value under the key of ''.
-	// Return the result of stringifying the value.
+	  disposeAll()
+	  {
+	    // console.log( "EVENTS >>>   destroyAll() ")
 
-	  return str('', {'': value}, limit);
-	}
+	    this.events.map( ee => { ee.dispose(); } );
+	  }
 
-	var jsonBeautify = beautify;
+	  async handleEvent(plugin, event, cb = null)
+	  {
+	    // console.log('EVENTS >> Listen for >> ['+plugin+'] -> '+event+' ...');
+
+	    if(cb != null)
+	    {
+	      // console.log('Listen for ['+name+'] using CALLBACK ...');
+	      return await this.thunderJS.on(plugin, event, cb);
+	    }
+	    else
+	    {
+	      return await thunderJS.on(plugin, event, (notification) =>
+	      {
+	          var str = " " + event + " ...  Event" + JSON.stringify(notification);
+	          console.log('Handler GOT >> ' + str);
+	      })
+	    }
+	  }
+	}//CLASS
 
 	class Progress extends lng.Component {
 	    static _template( )
 	    {
 	      let RR = lng.shaders.RoundedRectangle;
+
 	      var  barClr1  = 0xFFcccccc;  // #ccccccFF  // Background
 	      var  frameClr = 0xFF666666;  // #666666FF
 
@@ -3637,10 +3639,15 @@ var APP_com_comcast_pkgDemo = (function () {
 	      return this.value;
 	    }
 
+	    reset()
+	    {
+	      this.value = 0;
+	      this.tag("Progress").w = 0;
+	    }
+
 	    setProgress(pc)
 	    {
 	      this.value = pc;
-	      //console.log(" setProgress: " + pc)
 
 	      var ww = (this.w -4) * pc;
 
@@ -3650,17 +3657,13 @@ var APP_com_comcast_pkgDemo = (function () {
 	    _init()
 	    {
 	      this.tag("Background").w = this.w;
-	      this.tag("Progress").w   = 0;
-
-	      this.value = 0.0;
+	      this.reset();
 	    }
 	  }//CLASS
 
-	class TileButton extends lng.Component {
+	class AppTile extends lng.Component {
 	    static _template( )
 	    {
-	      let RR = lng.shaders.RoundedRectangle;
-
 	      var pts = 20;
 	      var frameClr = 0xFF666666;  // #666666FF
 	      var textClr  = 0xFFffffff;  // #ffffffFF
@@ -3668,22 +3671,30 @@ var APP_com_comcast_pkgDemo = (function () {
 	      var stroke    = 2;
 	      var strokeClr = 0xFF444444;
 
+	      let RR = { radius: 20, type: lng.shaders.RoundedRectangle, stroke: stroke, strokeColor: strokeClr};
+
 	      return {
+	        flexItem: { margin: 40 },
+	        alpha: 1.0,
 	        Button:
+	        {
+	          scale: 0.0,
+
+	          RRect:
 	          {
-	            RRect:
-	            {
-	              w: 190, h: 120, rtt: true, rect: true, alpha: 0.8, color: frameClr, shader: { radius: 20, type: RR, stroke: stroke, strokeColor: strokeClr},
+	              w: 210, h: 150, rtt: true, rect: true, pivot: 0.5, alpha: 1.0, color: frameClr, shader: RR,
 
 	              Image: {
 	                mountX: 0.5,
 	                mountY: 0.5,
+	                src: Utils.asset('images/crate2_80x80.png'),
 	                x: (w => 0.45 * w),
 	                y: (h => 0.4 * h)
 	              },
+
 	              Label:
 	              { mountX: 0.5, mountY: 1.0, x: (w => 0.5 * w), y: (h => h - 5),
-	                text: {  text: "Label 1", fontFace: 'Regular', fontSize: pts, textColor: textClr,
+	                text: {  text: "Label 11", fontFace: 'Regular', fontSize: pts, textColor: textClr,
 
 	                shadow: true,
 	                shadowColor: 0xFF000000,
@@ -3692,6 +3703,7 @@ var APP_com_comcast_pkgDemo = (function () {
 	                shadowBlur: 8,
 	                },
 	              },
+
 	              Icon: {
 	                alpha: 1.0,
 	                mountX: 1.0,
@@ -3701,24 +3713,15 @@ var APP_com_comcast_pkgDemo = (function () {
 	              },
 	            },
 
-	            Progress: { type: Progress, mountX: 0.0, x: 0, y: 140, w: 150, h: 8, alpha: 0.0 },
-	          }//Button
-	        }
-	      };
-
-	    _handleEnter() {
-	        this.fireAncestors('$buttonClicked', this.pkgId);
-
-	        var progress = this.tag("Progress");
-	        progress.setSmooth('alpha', 1, {duration: .1});
-	    }
+	            Progress: { type: Progress, mountX: 0.0, x: 0, y: 190, w: 210, h: 8, alpha: 0.0 },
+	        }//Button
+	      }
+	    };
 
 	    setLabel(s)
 	    {
-	      var btn = this.tag("Button");
-	      var obj = btn.tag("Label");
-
-	      obj.tag("Text").text = s;
+	      var obj = this.tag("Label");
+	      obj.text.text = s;
 	    }
 
 	    setIcon(s)
@@ -3731,103 +3734,299 @@ var APP_com_comcast_pkgDemo = (function () {
 
 	    _focus()
 	    {
-	      var btn = this.tag("Button");
-	      var bg  = btn.tag("RRect");
+	      var btn  = this.tag("Button");
+	      var tile =  btn.tag("RRect");
 
-	      bg.setSmooth('alpha', 1.00, {duration: 0.3});
-	      bg.setSmooth('scale', 1.15, {duration: 0.3});
+	      // console.log("BUTTON: focus() >> pkgId: " + this._info.pkgId);
+
+	      tile.setSmooth('scale', 1.15, {duration: 0.3});
 	    }
 
 	    _unfocus()
 	    {
-	      var btn = this.tag("Button");
-	      var bg  = btn.tag("RRect");
+	      var btn  = this.tag("Button");
+	      var tile =  btn.tag("RRect");
 
-	      bg.setSmooth('alpha', 0.5, {duration: 0.3});
-	      bg.setSmooth('scale', 1.0, {duration: 0.3});
+	      // console.log("BUTTON: unfocus() >> pkgId: " + this._info.pkgId);
+
+	      tile.setSmooth('scale', 1.0, {duration: 0.3});
+	    }
+
+	    hide()
+	    {
+	      if(this.tag("Button").scale == 1.0)
+	      {
+	        const anim = this.tag('Button').animation({
+	          duration: 0.5,
+	          actions: [
+	              { p: 'scale', v: { 0: 1, 0.5: 0.50, 1: 0.0 } },
+	          ]
+	        });
+	        anim.start();
+	      }
+	    }
+
+	    show(d = 0)
+	    {
+	      if(this.tag("Button").scale == 0.0)
+	      {
+	        const anim = this.tag('Button').animation({
+	          duration: 0.5,
+	          delay: d,
+	          actions: [
+	              { p: 'scale', v: { 0: 0, 0.5: 0.50, 1: 1.0 } },
+	          ]
+	        });
+	        anim.start();
+	      }
 	    }
 
 	    _init()
 	    {
-	      var button = this.tag("Button");
+	      this._enabled = true;
+	      this.tag("Button").scale = 0;
 
-	      button.w = this.w;
-	      button.h = this.h;
+	      if(this.w && this.h)
+	      {
+	        let button = this.tag("Button");
 
-	      button.tag("Label").text = this.label;
+	        button.w = this.w;
+	        button.h = this.h;
+	      }
 
-	      var img = this.tag("Image");
-	      img.patch( {src: this.img } );
+	      this.info = this.tileInfo;
 	    }
-	  }//CLASS
 
-	class TileButton$1 extends lng.Component {
-	    static _template( )
+	    set info( ii )
 	    {
-	      let RR = lng.shaders.RoundedRectangle;
+	      this.setInfo(ii);  // allow set 'null'
+	    }
 
-	      var pts = 20;
-	      var buttonClr = 0xFF888888;  // #888888FF  // Background
-	      var textClr   = 0xFFffffff;  // #ffffffFF
+	    get info()
+	    {
+	      return this._info;
+	    }
 
-	      var stroke    = 2;
-	      var strokeClr = 0xCC888888;
+	    setInfo(ii)
+	    {
+	      var check_mark_PNG = Utils.asset('images/check_mark.png');
+	      var download_PNG   = Utils.asset('images/download3.png');
 
-	      return {
-	        Button:
+	      if(ii)
+	      {
+	        if(ii.id)
 	        {
-	          RRect: { w: 150, h: 40, rect: true, color: buttonClr, shader: { radius: 8, type: RR, stroke: stroke, strokeColor: strokeClr} },
-	          Label: { mount: 0.5, x: (w => 0.5 * w), y: (h => 0.55 * h), text:{ text: 'Ok', fontSize: pts, textColor: textClr } },
-	        },
+	          ii.pkgId = ii.id;
 	        }
-	      };
 
-	//     _handleEnter()
-	//     {
-	// //        this.fireAncestors('$buttonClicked', this.pkgId);
-	//     }
+	        if(ii.name)  this.setLabel(ii.name);
+	        else
+	        if(ii.label) this.setLabel(ii.label);
+	        else
+	        if(ii.id)    this.setLabel(ii.id);
+	        else
+	        if(ii.pkgId) this.setLabel(ii.pkgId);
+	        else         this.setLabel("unknown22");
 
-	    setLabel(s)
-	    {
-	      var obj = this.tag("Label");
-	      obj.text.text = s;
+	        var icon = (ii.pkgInstalled) ? check_mark_PNG : download_PNG;
+	        this.setIcon(icon);
+	      }
+	      else
+	      {
+	        this.setIcon(download_PNG);
+	      }
+
+	      this._info = ii; // allow 'null'
 	    }
 
-	    _focus()
+	    isEnabled()
 	    {
-	      console.log("BUTTON - _focus()");
-
-	      var bg  = this.tag("Button");
-
-	      bg.setSmooth('alpha', 1.00, {duration: 0.3});
-	      bg.setSmooth('scale', 1.15, {duration: 0.3});
+	      return this._enabled;
 	    }
 
-	    _unfocus()
+	    enable()
 	    {
-	      console.log("BUTTON - _unfocus()");
+	      //console.log("APP TILE  >> enable() - " + this.info.pkgId)
 
-	      var bg  = this.tag("Button");
-
-	      bg.setSmooth('alpha', 0.5, {duration: 0.3});
-	      bg.setSmooth('scale', 1.0, {duration: 0.3});
+	      this.tag("Button").setSmooth('alpha', 1.0, {duration: 0.3});
+	      this._enabled = true;
 	    }
 
-	    _init()
+	    disable()
 	    {
-	      var button = this.tag("Button");
+	      //console.log("APP TILE  >> disable() - " + this.info.pkgId)
 
-	      // if( this.label)
-	      // {
-	      //   this.setLabel(this.label);
-	      // }
-
-	      button.w = this.w;
-	      button.h = this.h;
-
-	      button.tag("Label").text = this.label;
+	      this.tag("Button").setSmooth('alpha', 0.5, {duration: 0.3});
+	      this._enabled = false;
 	    }
+
+	    startWiggle()
+	    {
+	        this.wiggleAnim = this.tag('Image').animation({
+	            duration: 0.11*3,
+	            repeat: -1,
+	            actions: [
+	              {
+	                t: '',
+	                repeat: -1,
+	                p: 'rotation', v: { 0: 0.0, 0.25: -0.14, 0.5: 0.0, 0.75: 0.14, 1: 0.0},
+	              },
+	            ],
+	          });
+
+	        this.wiggleAnim.start();
+	    }
+
+	    stopWiggle()
+	    {
+	      this.wiggleAnim.stop();
+	      this.wiggleAnim = null;
+	    }
+
+	    setInstalled(v)
+	    {
+	      if(this._info)
+	      {
+	        this._info.pkgInstalled = v;
+	      }
+	    }
+
+	    isInstalled()
+	    {
+	      return this._info.pkgInstalled;
+	    }
+
+	    clickAnim()
+	    {
+	      var anim = this.tag('Button').animation({
+	        duration: 0.35,
+	        repeat: 1,
+	        actions: [
+	          {
+	            t: '',
+	            p: 'scale', v: { 0: 1.0, 0.5: 1.2, 1: 1.0},
+	          },
+	        ],
+	      });
+
+	      anim.start();
+	    }
+
 	  }//CLASS
+
+	class AppList extends lng.Component {
+
+	    static _template() {
+	      return {
+	          flex: {direction: 'row', padding: 20, paddingTop: 50, wrap: false },
+	          children:[]
+	      }
+	    }
+
+	    _getFocused()
+	    {
+	      console.log('LIST >>> _getFocused() ... ENTER');
+	      return this.children[0]//this.storeButtonIndex]
+	    }
+
+	    addTile(n, info)
+	    {
+	      // console.log('addTile() ... ENTER')
+
+	      // console.log("LIST  addTile( n: "+n+",  info:  " + JSON.stringify(info, 2, null) )
+	      // console.log("LIST  addTile( )    ... this.children.length " + this.children.length  )
+
+	      this.children[n].setInfo( info );
+	      this.children[n].show();
+	    }
+
+	    set tiles( list )
+	    {
+	        // console.log("SETTING >>> tiles: " + JSON.stringify(list, 2, null) )
+	        this.children = list.map((tileInfo, index) =>
+	        {
+	            return {
+	              w: 210, h: 150,
+	              type: AppTile,
+	              tileInfo
+	            }
+	        });
+	    }
+
+	  }//CLASS
+
+	class AppTile$1 extends lng.Component
+	{
+	  static _template( )
+	  {
+	    let RR = lng.shaders.RoundedRectangle;
+
+	    return {
+	      Button:
+	      {
+	        RRect: { w: 150, h: 40, rect: true, color: 0xFF888888, shader: { radius: 8, type: RR, stroke: 1, strokeColor: 0xFF333333 } },
+	        Label: { mount: 0.5, x: (w => 0.5 * w), y: (h => 0.55 * h), text:{ text: '(unset)', fontSize: 20,  textColor: 0xFFffffff } },
+	      },
+	      }
+	    };
+
+	  setLabel(s)
+	  {
+	    var obj = this.tag("Label");
+	    obj.text.text = s;
+	  }
+
+	  _focus()
+	  {
+	    var bb  = this.tag("Button");
+	    var bg  = this.tag("RRect");
+	    var clr = this.clrFocus;
+
+	    bb.setSmooth('alpha', 1.00, {duration: 0.3});
+	    bb.setSmooth('scale', 1.18, {duration: 0.3});
+	    bg.setSmooth('color',  clr, {duration: 0.3});
+	  }
+
+	  _unfocus()
+	  {
+	    var bb  = this.tag("Button");
+	    var bg  = this.tag("RRect");
+	    var clr = this.clrBlur;
+
+	    bb.setSmooth('alpha', 1.00, {duration: 0.3});
+	    bb.setSmooth('scale', 1.00, {duration: 0.3});
+	    bg.setSmooth('color',  clr, {duration: 0.3});
+	  }
+
+	  _init()
+	  {
+	    this.pts       = 20;
+	    this.stroke    = 2;
+	    this.strokeClr = 0xCC888888;
+
+	    if(this.clrFrame == undefined) this.clrFrame = 0xFF666666; // #666666FF
+	    if(this.clrText  == undefined) this.clrText  = 0xFFffffff; // #ffffffFF
+
+	    if(this.clrFocus == undefined) this.clrFocus = 0xFFaaaaaa; // #aaaaaaFF
+	    if(this.clrBlur  == undefined) this.clrBlur  = 0xFF888888; // #888888FF
+
+	    var button = this.tag("Button");
+
+	    button.w = this.w;
+	    button.h = this.h;
+
+	    if(this.label)
+	    {
+	      this.setLabel(this.label);
+	    }
+	  }
+
+	  setClrBackground(clr) { this.clrBackground     = clr;};
+	  setClrFocus(clr)      { this.clrFocus          = clr;};
+	  setClrBlur(clr)       { this.clrBlur           = clr;};
+	  setLabel(v)           { this.tag("Label").text = v; };
+
+	}//CLASS
 
 	class OkCancel extends lng.Component {
 	    static _template( )
@@ -3859,8 +4058,8 @@ var APP_com_comcast_pkgDemo = (function () {
 	              },
 	            },
 
-	            OkButton:    { type: TileButton$1, label: "Ok",     mount: 0.5, x: (w => 0.25 * w), y: (h => h - 35), w: 150, h: 40 },
-	            CancelButton:{ type: TileButton$1, label: "Cancel", mount: 0.5, x: (w => 0.75 * w), y: (h => h - 35), w: 150, h: 40 },
+	            OkButton:    { type: AppTile$1, label: "Ok",     clrFocus: 0xFF008800, mount: 0.5, x: (w => 0.25 * w), y: (h => h - 35), w: 150, h: 40 },
+	            CancelButton:{ type: AppTile$1, label: "Cancel", clrFocus: 0xFF880000, mount: 0.5, x: (w => 0.75 * w), y: (h => h - 35), w: 150, h: 40 },
 	        }//Dialog
 	      }
 	    };
@@ -3877,7 +4076,7 @@ var APP_com_comcast_pkgDemo = (function () {
 	                        this.tag("CancelButton")
 	                      ];
 
-	      this.buttonIndex = 0;
+	      this.buttonIndex = 1;
 
 	      this.tag("Dialog").w = this.w;
 	      this.tag("Dialog").h = this.h;
@@ -3890,8 +4089,7 @@ var APP_com_comcast_pkgDemo = (function () {
 	            {
 	              $enter()
 	              {
-	                // this.setFocus = true;
-	                this.tag("OkButton").setFocus = true;
+	                this.tag("CancelButton").setFocus = true;
 	              }
 
 	              _handleLeft()
@@ -3906,12 +4104,14 @@ var APP_com_comcast_pkgDemo = (function () {
 
 	              handleEsc()
 	              {
-	                this.fireAncestors('$okcClickedCancel', this.pkgId);
+	                this.fireAncestors('$onRemoveCANCEL', this.pkgId, false);
 	              }
 
-	              _handleEnter()
+	              _handleEnter() // could be OK or CANCEL button
 	              {
-	                this.fireAncestors('$okcClickedOk', this.pkgId);
+	                var name = (this.buttonIndex == 0) ? '$onRemoveOK' : '$onRemoveCANCEL';
+
+	                this.fireAncestors(name);
 	              }
 
 	              _handleKey(k)
@@ -3935,6 +4135,38 @@ var APP_com_comcast_pkgDemo = (function () {
 	        ]}//_states
 	  }//CLASS
 
+	const DefaultApps =
+	[
+	  {
+	    "pkgId": "TestApp1",
+	    "type": "non-OCI",
+	    "url": "http://10.0.2.15/testApp1.json",
+	    "token": "TODO: Security",
+	    "listener": "TODO: url or endpoint of event listener provided by caller"
+	  },
+
+	  {
+	    "pkgId": "TestApp2",
+	    "type": "non-OCI",
+	    "url": "http://10.0.2.15/testApp2.tgz",
+	    "token": "TODO: Security",
+	    "listener": "TODO: url or endpoint of event listener provided by caller"
+	  },
+
+	  {
+	    "pkgId": "TestApp3",
+	    "type": "non-OCI",
+	    "url": "http://10.0.2.15/testApp3.tgz",
+	    "token": "TODO: Security",
+	    "listener": "TODO: url or endpoint of event listener provided by caller"
+	  }
+	];
+
+	var AvailableApps = [];
+	var InstalledApps = [];
+
+	var InstalledAppMap = {};
+
 	const thunder_cfg = {
 	  host: '127.0.0.1',
 	  port: 9999,
@@ -3947,9 +4179,7 @@ var APP_com_comcast_pkgDemo = (function () {
 	  }
 	};
 
-	console.log('HUGH >>> Creating ThunderJS ...');
-
-	const thunderJS$1 = thunderJS(thunder_cfg);
+	var thunderJS$2 = null;
 
 	class App extends Lightning.Component
 	{
@@ -3957,13 +4187,32 @@ var APP_com_comcast_pkgDemo = (function () {
 	    return [{ family: 'Regular', url: Utils.asset('fonts/Roboto-Regular.ttf') }]
 	  }
 
-	  static _template() {
-
+	  static _template()
+	  {
 	    let RR = Lightning.shaders.RoundedRectangle;
-	    let IMG = Utils.asset('images/logo.png');
 
-	    //console.log("IMG >>>>>  " + IMG)
-	    var ui = {
+	    var ui =
+	    {
+	      Blind1: {
+	        x: 0, y: 0, w: 1920, h: 1080/2, rect: true, color: 0xff000000, zIndex: 998,
+
+	        // Bg: {mountX: 0.5,
+	        //   x: 1920/2, y: 1080/2, w: 600, h: 79, rect: true, color: 0xff000000, zIndex: 998,
+	        // },
+
+	        RDKlogo: {
+	          mount: 0.5,
+	          x: 1920/2,
+	          y: 1080/2,
+	          zIndex: 999,
+	          src: Utils.asset('images/RDKLogo400x79.png'),
+	        },
+	      },
+	      Blind2: {
+	        x: 0, y: 1080/2, w: 1920, h: 1080/2, rect: true, color: 0xff000000, zIndex: 997
+	      },
+
+
 	      Background: {
 	        w: 1920,
 	        h: 1080,
@@ -3971,13 +4220,14 @@ var APP_com_comcast_pkgDemo = (function () {
 	        src: Utils.asset('images/background1.png'),
 	      },
 
+
 	      Title: {
 	        mountX: 0.5,
 	        mountY: 0,
 	        x: 1920/2,
 	        y: 20,
 	        text: {
-	          text: "-  Demo PKG Store  -",
+	          text: "Demo Store",
 	          fontFace: 'Regular',
 	          fontSize: 70,
 	          textColor: 0xFFffffff,
@@ -3990,59 +4240,145 @@ var APP_com_comcast_pkgDemo = (function () {
 	        },
 	      },
 
-	      PackagesList:
+	      Lists:
 	      {
-	        mountX: 0.5, x: 1920/2, y: 150, w: 1150, /*h: 225,*/ flex: {direction: 'row', padding: 45, wrap: true}, rect: true, rtt: true, shader: { radius: 20, type: RR}, color: 0x4F888888,
+	        mountX: 0.5, x: 1920/2, y: 150, w: 1450, h: 900,
+	        flex: {direction: 'column', alignItems: 'center'},
+	      //	rect: false, //rtt: true, shader: { radius: 20, type: RR}, color: 0x4F888888,
+	        // rect: true, color: 0x88ccccFF,
 
-	        // Available PACKAGES from Inventory ... injected here
+	        HelpText:
+	        {
+	          // rect: true, color: 0xff00ff00,
 
-	      },
+	          flex: {direction: 'row'},
 
+	          HelpBox1:
+	          {
+	            w: 1450/2,
+	            h: 10,
+	            // rect: true, color: 0xffFF0000,
 
-	      HelpTip1:
-	      {
-	        mountX: 0.0, x: 1980 * 0.25, y: 120, //397,
-	        text: {
-	          text: "Use  (A)ll or (I)nfo for package metadata",
-	          textAlign: 'right',
-	          fontFace: 'Regular',
-	          fontSize: 16,
-	          textColor: 0xFFffffff,
+	            HelpTip1:
+	            {
+	              text:
+	              {
+	                w: 1450/2,
+	                text: "Use  (A)ll or (I)nfo for package metadata",
+	                textAlign: 'center',
+	                fontFace: 'Regular',
+	                fontSize: 16,
+	                textColor: 0xFFffffff,
 
-	          shadow: true,
-	          shadowColor: 0xff000000,
-	          shadowOffsetX: 2,
-	          shadowOffsetY: 2,
-	          shadowBlur: 8,
+	                shadow: true,
+	                shadowColor: 0xff000000,
+	                shadowOffsetX: 2,
+	                shadowOffsetY: 2,
+	                shadowBlur: 8,
+	              },
+	            },
+	          },//Box
+	          HelpBox2:
+	          {
+	            w: 1450/2,
+	            h: 10,
+	            // rect: true, color: 0x88FF00FF,
+
+	            HelpTip2:
+	            {
+	              text:
+	              {
+	                w: 1450/2,
+	                // h: 50,
+	                text: "Use  UP/DN  arrow keys for Console",
+	                textAlign: 'center',
+	                fontFace: 'Regular',
+	                fontSize: 16,
+	                textColor: 0xFFffffff,
+
+	                shadow: true,
+	                shadowColor: 0xff000000,
+	                shadowOffsetX: 2,
+	                shadowOffsetY: 2,
+	                shadowBlur: 8,
+	              },
+	            },
+	          },//Box
+	        }, // HelpText
+
+	        AvailableTXT: {
+	          // rect: true, color: 0x88FF00FF,
+	          x: 0,
+	          y: 60,
+	          w: 1450,
+	          text: {
+	            text: "AVAILABLE: ",
+
+	            // highlight: true,
+	            // highlightColor: 0xFF0000ff,
+
+	            // textAlign: 'left',
+	            fontFace: 'Regular',
+	            fontSize: 30,
+	            textColor: 0xFFffffff,
+
+	            shadow: true,
+	            shadowColor: 0xff000000,
+	            shadowOffsetX: 2,
+	            shadowOffsetY: 2,
+	            shadowBlur: 8,
+	          },
 	        },
-	      },
 
-	      HelpTip2:
-	      {
-	        mountX: 1.0, x: 1980 * 0.72, y: 120, //397,
-	        text: {
-	          text: "Use  UP/DN  arrow keys for Console",
-	          textAlign: 'right',
-	          fontFace: 'Regular',
-	          fontSize: 16,
-	          textColor: 0xFFffffff,
+	        AvailableGroup:
+	        {
+	          mountX: 0.5, x: 1450/2, y: 0, w: 1450, h: 300, flex: {direction: 'row', padding: 15, wrap: false }, rect: true, rtt: true, shader: { radius: 20, type: RR}, color: 0x4F888888,
 
-	          shadow: true,
-	          shadowColor: 0xff000000,
-	          shadowOffsetX: 2,
-	          shadowOffsetY: 2,
-	          shadowBlur: 8,
+	          // Available PACKAGES from inventory ... injected here
+	          AvailableList: { x: 0, type: AppList }
 	        },
-	      },
+
+
+	        InstalledTXT: {
+	          // rect: true, color: 0x88FF00FF,
+	          x: 0,
+	          y: 160,
+	          w: 1450,
+	          text: {
+	            text: "INSTALLED: ",
+
+	            // highlight: true,
+	            // highlightColor: 0xFF0000ff,
+
+	            // textAlign: 'left',
+	            fontFace: 'Regular',
+	            fontSize: 30,
+	            textColor: 0xFFffffff,
+
+	            shadow: true,
+	            shadowColor: 0xff000000,
+	            shadowOffsetX: 2,
+	            shadowOffsetY: 2,
+	            shadowBlur: 8,
+	          },
+	        },
+	        InstalledGroup:
+	        {
+	          mountX: 0.5, x: 1450/2, y: 100, w: 1450, h: 300, flex: {direction: 'row', padding: 15, wrap: true}, rect: true, rtt: true, shader: { radius: 20, type: RR}, color: 0x4F888888,
+
+	          InstalledList: { type: AppList }
+
+	        }, // InstalledGroup
+	      },//Lists
 
 	      SpaceLeft:
 	      {
-	        x: 1240, y: 160,
+	        x: 1400, y: 600,
 	        text: {
-	          text: "Space Remaining: 0 Kb",
+	          text: "Space: 0 Kb",
 	          textAlign: 'right',
 	          fontFace: 'Regular',
-	          fontSize: 18,
+	          fontSize: 22,
 	          textColor: 0xaa00FF00,
 
 	          shadow: true,
@@ -4056,8 +4392,8 @@ var APP_com_comcast_pkgDemo = (function () {
 
 	      ConsoleBG:
 	      {
-	        mountX: 0.5, //mountY: 1.0,
-	        x: 1920/2, y: 150, w: 1140,
+	        mountX: 0.5,
+	        x: 1920/2, y: 150, w: 1450,
 	        h: 600, rect: true,
 	        alpha: 0.0, shader: { radius: 20, type: RR },
 	        color: 0xcc222222, // #222222ee
@@ -4066,7 +4402,7 @@ var APP_com_comcast_pkgDemo = (function () {
 	        Console: {
 
 	          x: 10, y: 10,
-	          w: 1160,
+	          w: 1450,
 	          //h: 500,
 	          text: {
 	            fontFace: 'Regular',
@@ -4084,12 +4420,10 @@ var APP_com_comcast_pkgDemo = (function () {
 	      // },
 
 	      OkCancel: { type: OkCancel, x: 1920/2, y: 400, w: 600, h: 180, alpha: 0.0 },
-	    };
 
-	    Inventory.map( (o, i) =>
-	    {
-	      ui.PackagesList[ 'Package' + i] = { pkgId: o.pkgId, type: TileButton, flexItem: {margin: 40}, w: 150, h: 80, label: o.pkgId, img: Utils.asset('images/crate2_80x80.png') };
-	    } );
+	      // LineH: { mountY: 0.5, x: 0, y: 1080/2, w: 1920, h: 2, rect: true, color: 0xff00FF00 },
+	      // LineV: { mountX: 0.5, y: 0, x: 1920/2, h: 1080, w: 2, rect: true, color: 0xff00FF00 },
+	    };
 
 	    return ui;
 	  }
@@ -4099,134 +4433,244 @@ var APP_com_comcast_pkgDemo = (function () {
 	    this.tag('Console').text.text = str;
 	  }
 
-	  $okcClickedOk(pkg_id)
+	  $onRemoveOK() // 'okButton = true' indicates the OK button was clicked
 	  {
-	    console.log("okcClickedOk ENTER - ... info: " + pkg_id);
+	    var dlg = this.tag("OkCancel");
+	    var pkg_id = dlg.pkgId;
 
-	    this._setState('PackagesState');
+	    console.log("onRemoveOK ENTER - ... pkg_id: " + pkg_id);
 
-	    let info = Inventory[this.buttonIndex];
+	    if(pkg_id == undefined)
+	    {
+	      console.log("onRemoveOK() >>>  ERROR - ... pkg_id: " + pkg_id);
+	      return;
+	    }
 
-	    this.removePkg(info.pkgId);
+	    this.removePkg(pkg_id);
+
+	    dlg.setSmooth('alpha', 0, {duration: 0.3}); // HIDE
+
+	    var appButton = this.tag('InstalledList').children[this.installedButtonIndex];
+	    appButton.stopWiggle();
+
+	    // Enable STORE button - as it's uninstalled
+	    var storeButton = this.tag('AvailableList').children.filter( (o) => { return o.info.pkgId == pkg_id; });
+
+	    if(storeButton.length > 0)
+	    {
+	      storeButton[0].enable();
+	    }
+
+	    this._setState('InstalledRowState');
+	}
+
+	  $onRemoveCANCEL()
+	  {
+	    var dlg = this.tag("OkCancel");
+	    var pkg_id = dlg.pkgId;
+
+	    console.log("onRemoveCANCEL ENTER - ... pkg_id: " + pkg_id);
+
+	    dlg.setSmooth('alpha', 0, {duration: 0.3}); // HIDE
+
+	    console.log("onRemoveCANCEL ENTER - ... info: " + pkg_id);
+
+	    var button = this.tag('InstalledList').children[this.installedButtonIndex];
+	    button.stopWiggle();
+
+	    this._setState('InstalledRowState');
 	  }
 
-	  $okcClickedCancel(pkg_id)
+	  $InstallClicked(pkg_id)
 	  {
-	    console.log("okcClickedCancel ENTER - ... info: " + pkg_id);
+	    // console.log("INSTALL >>  InstallClicked() - ENTER .. pkg_id: " + pkg_id);
 
-	    this._setState('PackagesState');
+	    let button = this.tag('AvailableList').children[this.storeButtonIndex];
+
+	    this.isInstalled(pkg_id).then( (ans) =>
+	    {
+	      if( ans['available'] == "false")
+	      {
+	        var progress = button.tag("Progress");
+
+	        progress.reset(); // reset
+	        progress.setSmooth('alpha', 1, {duration: .1});
+
+	        var info = button.info;
+
+	        this.installPkg(pkg_id, info);
+	      }
+	      else
+	      {
+	        console.log("CALL >> this.installPkg() ALREAY have ... pkg_id: " + pkg_id);
+	      }
+	    });
 	  }
 
-	  $buttonClicked(pkg_id)
+	  $LaunchClicked(pkg_id)
 	  {
-	    var info = Inventory[this.buttonIndex];
-	    console.log("installPkg ENTER - ... info: " + info);
+	    // console.log("$LaunchClicked() >>>  ENTER - ... pkg_id: " + pkg_id)
 
-	    this.installPkg(pkg_id, info);
+	    let info = InstalledAppMap[pkg_id];
+	    if(info)
+	    {
+	      this.launchPkg(pkg_id, info);
+	    }
+	    else
+	    {
+	      console.log("$LaunchClicked() >>> Error:  NO  info: " + info);
+	    }
 	  }
 
 	  async getAvailableSpace()
 	  {
-	    var result = await thunderJS$1.call('Packager', 'getAvailableSpace', null);
+	    try
+	    {
+	      var result = await thunderJS$2.call('Packager', 'getAvailableSpace', null);
 
-	    //this.setConsole( beautify(result, null, 2, 100) )
+	      this.tag('SpaceLeft').text.text = ("Space Remaining: " + result.availableSpaceInKB + " Kb");
 
-	    this.tag('SpaceLeft').text.text = ("Space Remaining: " + result.availableSpaceInKB + " Kb");
+	      //this.setConsole( beautify(result, null, 2, 100) )
+	    }
+	    catch(e)
+	    {
+	      this.setConsole( 'getAvailableSpace() >>> CAUGHT:  e: ' + jsonBeautify(e, null, 2, 100) );
+	    }
 	  }
 
 	  async getPackageInfo(pkg_id)
 	  {
-	    console.log('HUGH >>> Sending Request A ...');
+	    try
+	    {
+	      let params = { "pkgId": pkg_id };
 
-	    let info  = { "pkgId": pkg_id };
+	      var result = await thunderJS$2.call('Packager', 'getPackageInfo', params);
 
-	    var result = await thunderJS$1.call('Packager', 'getPackageInfo', info);
-
-	    // console.log('Called >>  RESULT: ' + JSON.stringify(result));
-
-	    // this.tag('Console').text.text = beautify(result, null, 2, 100);
-	    this.setConsole( jsonBeautify(result, null, 2, 100) );
+	      this.setConsole( jsonBeautify(result, null, 2, 100) );
+	    }
+	    catch(e)
+	    {
+	      this.setConsole( 'getPackageInfo() >>> CAUGHT:  e: ' +  jsonBeautify(e, null, 2, 100) );
+	    }
 	  }
 
 	  async getInstalled()
 	  {
-	    var result = await thunderJS$1.call('Packager', 'getInstalled', null);
+	    // console.log("getInstalled() - ENTER ")
 
-	    // this.tag('Console').text.text = beautify(result, null, 2, 100);
-	    this.setConsole( jsonBeautify(result, null, 2, 100) );
+	    try
+	    {
+	      var result = await thunderJS$2.call('Packager', 'getInstalled', null);
+
+	      this.setConsole( jsonBeautify(result, null, 2, 100) );
+	    }
+	    catch(e)
+	    {
+	      this.setConsole( 'getInstalled() >>> CAUGHT:  e: ' +  jsonBeautify(e, null, 2, 100) );
+	      return;
+	    }
 
 	    this.getAvailableSpace();
 
-	    if(this.tag('PackagesList').children.length > 0)
+	    InstalledAppMap = {};    // reset
+	    InstalledApps   = null; // reset
+
+	    //
+	    // NOTE:  getInstalled() returns meta with 'id' -NOT- 'pkgId'
+	    //
+	    result.applications.map( (o) => InstalledAppMap[o.id] = o ); // populate info
+
+	    InstalledApps = result.applications; // update array
+
+	    // DISABLE apps that are already installed...
+	    InstalledApps.map( have =>
 	    {
-	      this.tag('PackagesList').children.map(b =>
+	      let disable = AvailableApps.filter( o => o.pkgId == have.id );
+	      let dbutton = this.tag('AvailableList').children.filter( o => o.info.pkgId == disable[0].pkgId);
+
+	      if(dbutton.length > 0)
 	      {
-	        result.applications.map( installed_pkg =>
-	        {
-	          if(installed_pkg.id == b.pkgId)
-	          {
-	            b.setIcon(Utils.asset('images/check_mark.png'));
-	          }
-	        });
-	      });
-	    }//ENDIF
-	  }
+	        dbutton[0].disable();
+	      }
+	    });
 
-	  async isInstalled(pkd_id)
-	  {
-	    console.log('HUGH >>> Sending Request IS INSTALLED ? ...' + pkg_id);
-	    var result = await thunderJS$1.call('Packager', 'isInstalled', pkd_id);
-
-	    this.setConsole( jsonBeautify(result, null, 2, 100) );
-	  }
-
-
-	  async handleEvent(name, event, cb = null)
-	  {
-	    console.log('Listen for >> ['+name+'] -> '+event+' ...');
-
-	    if(cb != null)
+	    // SHOW / HIDE tiles per installations
+	    this.tag("InstalledList").children.map( (button, i) =>
 	    {
-	      // console.log('Listen for ['+name+'] using CALLBACK ...');
-	      return await thunderJS$1.on(name, event, cb);
-	    }
-	    else
-	    {
-	      return await thunderJS$1.on(name, event, (notification) =>
+	      if(i < InstalledApps.length)
 	      {
-	          var str = " " + event + " ...  Event" + JSON.stringify(notification);
-	          console.log('Handler GOT >> ' + str);
-	      })
+	        InstalledApps[i].pkgInstalled = true;
+
+	        button.info = InstalledApps[i];
+	        button.show(i * 0.15);
+	      }
+	      else
+	      {
+	        button.info = null;
+	        button.hide();
+	      }
+	    });
+	  }
+
+	  async isInstalled(pkg_id)
+	  {
+	    try
+	    {
+	      let params = { "pkgId": pkg_id };
+
+	      let result = await thunderJS$2.call('Packager', 'isInstalled', params);
+
+	//      console.log( 'DEBUG:  IsInstalled  ' + beautify(result, null, 2, 100) )
+	//      this.setConsole(     'IsInstalled  ' + beautify(result, null, 2, 100) )
+
+	      return result;
+	    }
+	    catch(e)
+	    {
+	      console.log('DEBUG:  isInstalled() >>> CAUGHT:  e: ' +  jsonBeautify(e, null, 2, 100) );
+	      this.setConsole(    'isInstalled() >>> CAUGHT:  e: ' +  jsonBeautify(e, null, 2, 100) );
+	      return false;
 	    }
 	  }
 
-	  async installPkg(pkg_id, info)
+	  async launchPkg(pkg_id, info)
 	  {
-	    var result = await thunderJS$1.call('Packager', 'install', info);
+	    let params =
+	    {
+	        "client": pkg_id,
+	        "uri": pkg_id, //TODO:  Unexpected... check why ?
+	        // "uri": info.bundlePath,
+	        "mimeType": "application/dac.native"
+	    };
 
-	    // console.log('Called >>  RESULT: ' + JSON.stringify(result));
+	    try
+	    {
+	      var result = await thunderJS$2.call('org.rdk.RDKShell.1', 'launchApplication', params);
 
-	    // this.tag('Console').text.text = beautify(result, null, 2, 100);
-	    this.setConsole( jsonBeautify(result, null, 2, 100) );
+	      this.setConsole( jsonBeautify(result, null, 2, 100) );
+	    }
+	    catch(e)
+	    {
+	      console.log( 'launchPkg() >>> CAUGHT:  e: ' +  jsonBeautify(e, null, 2, 100) );
+	      this.setConsole( 'launchPkg() >>> CAUGHT:  e: ' +  jsonBeautify(e, null, 2, 100) );
+	    }
+	  }
 
-	    var info = Inventory[this.buttonIndex];
+	  async installPkg(thisPkgId, info)
+	  {
+	    var myEvents = new Events(thunderJS$2, thisPkgId);
 
-	    let buttons  = this.tag('PackagesList').children;
-	    let button   = buttons[this.buttonIndex];
+	    let buttons  = this.tag('AvailableList').children;
+	    let button   = buttons[this.storeButtonIndex];
 	    let progress = button.tag('Progress');
 
-	    progress.setProgress(0); // reset
+	    progress.reset(); // reset
 
 	    let handleFailure = (notification, str) =>
 	    {
-	      let pid = pkg_id;
-
 	      console.log("FAILURE >> '"+str+"' ... notification = " + JSON.stringify(notification) );
 
-	//      var taskId = notification.task;
-	      var  pkgId = notification.pkgId;
-
-	      if(pkgId == pid)
+	      if(thisPkgId == notification.pkgId)
 	      {
 	        button.setIcon(Utils.asset('images/x_mark.png'));
 
@@ -4236,7 +4680,7 @@ var APP_com_comcast_pkgDemo = (function () {
 	        {
 	          button.setIcon(Utils.asset('images/x_mark.png'));
 
-	          progress.setProgress(0); //reset
+	          progress.reset(); // reset
 
 	          this.getAvailableSpace();
 
@@ -4254,207 +4698,401 @@ var APP_com_comcast_pkgDemo = (function () {
 
 	    let handleProgress = (notification) =>
 	    {
-	      let pid = pkg_id;
+	      // console.log("HANDLER >> pkgId: "+thisPkgId+" ... notification = " + JSON.stringify(notification) );
 
-	      console.log("HANDLER >>  notification = " + JSON.stringify(notification) );
-
-	//      var taskId = notification.task;
-	      var  pkgId = notification.pkgId;
-
-	      if(pkgId == pid)
+	      if(thisPkgId == notification.pkgId)
 	      {
 	        let pc = notification.status / 8.0;
-	        // console.log("New pc = " + pc);
-
 	        progress.setProgress(pc);
+
+	        // console.log("HANDLER >> pkgId: "+thisPkgId+" ... progress = " + pc );
 
 	        if(pc == 1.0)
 	        {
 	          progress.setSmooth('alpha', 0, {duration: 2.3});
 
-	          setTimeout( () =>
+	          var ans = AvailableApps.filter( (o) => { return o.pkgId == notification.pkgId; });
+
+	          if(ans.length == 1) // IGNORE OTHER NOTTIFICATIONS
 	          {
-	            button.setIcon(Utils.asset('images/check_mark.png'));
+	            var info = ans[0];
+	            this.onPkgInstalled(info, button);
 
-	            progress.setProgress(0); //reset
-
-	            this.getAvailableSpace();
-
-	          }, 2.2 * 1000); //ms
-	        }
+	            if(info.events)
+	            {
+	              info.events.disposeAll(); // remove event handlers
+	              info.events = null;
+	            }
+	          }
+	        }//ENDIF - 100%
 	      }
 	    };
 
-	    let hh1 = await this.handleEvent('Packager', 'onDownloadCommence', handleProgress);
-	    let hh2 = await this.handleEvent('Packager', 'onDownloadComplete', handleProgress);
+	    {
+	      myEvents.add( 'Packager', 'onDownloadCommence', handleProgress);
+	      myEvents.add( 'Packager', 'onDownloadComplete', handleProgress);
 
-	    let hh3 = await this.handleEvent('Packager', 'onExtractCommence',  handleProgress);
-	    let hh4 = await this.handleEvent('Packager', 'onExtractComplete',  handleProgress);
+	      myEvents.add( 'Packager', 'onExtractCommence',  handleProgress);
+	      myEvents.add( 'Packager', 'onExtractComplete',  handleProgress);
 
-	    let hh5 = await this.handleEvent('Packager', 'onInstallCommence',  handleProgress);
-	    let hh6 = await this.handleEvent('Packager', 'onInstallComplete',  handleProgress);
+	      myEvents.add( 'Packager', 'onInstallCommence',  handleProgress);
+	      myEvents.add( 'Packager', 'onInstallComplete',  handleProgress);
 
+	      myEvents.add( 'Packager', 'onDownload_FAILED',     handleFailureDownload,) ;
+	      myEvents.add( 'Packager', 'onDecryption_FAILED',   handleFailureDecryption) ;
+	      myEvents.add( 'Packager', 'onExtraction_FAILED',   handleFailureExtraction) ;
+	      myEvents.add( 'Packager', 'onVerification_FAILED', handleFailureVerification);
+	      myEvents.add( 'Packager', 'onInstall_FAILED',      handleFailureInstall);
+	    }
 
-	    let hh7 = await this.handleEvent('Packager', 'onDownload_FAILED',     handleFailureDownload);
-	    let hh8 = await this.handleEvent('Packager', 'onDecryption_FAILED',   handleFailureDecryption);
-	    let hh9 = await this.handleEvent('Packager', 'onExtraction_FAILED',   handleFailureExtraction);
-	    let hhA = await this.handleEvent('Packager', 'onVerification_FAILED', handleFailureVerification);
-	    let hhB = await this.handleEvent('Packager', 'onInstall_FAILED',      handleFailureInstall);
+	    try
+	    {
+	      var result = await thunderJS$2.call('Packager', 'install', info);
+
+	      this.setConsole( jsonBeautify(result, null, 2, 100) );
+	    }
+	    catch(e)
+	    {
+	      this.setConsole( 'installPkg() >>> CAUGHT:  e: ' +  jsonBeautify(e, null, 2, 100) );
+	    }
+
+	    info.events = myEvents;
 	  }
 
 	  async removePkg(pkg_id)
 	  {
-	    console.log("removePkg ENTER - ... pkg_id: " + pkg_id);
+	    console.log("removePkg() >>>    ENTER - ... pkg_id: " + pkg_id);
+
+	    if(pkg_id == undefined)
+	    {
+	      console.log("removePkg() >>>  ERROR - ... pkg_id: " + pkg_id);
+	      return;
+	    }
 
 	    var params = {
 	      "pkgId": pkg_id
 	    };
 
-	    var result = await thunderJS$1.call('Packager', 'remove', params);
+	    try
+	    {
+	      var result = await thunderJS$2.call('Packager', 'remove', params);
 
-	    console.log('Called >> Remove() ... RESULT: ' + JSON.stringify(result));
-	    this.setConsole( jsonBeautify(result, null, 2, 100) );
+	      this.setConsole( jsonBeautify(result, null, 2, 100) );
+	    }
+	    catch(e)
+	    {
+	      this.setConsole( 'removePkg() >>> CAUGHT:  e: ' +  jsonBeautify(e, null, 2, 100) );
+	    }
 
-	    let buttons  = this.tag('PackagesList').children;
-	    let button   = buttons[this.buttonIndex];
+	    // Update the Installed
+	    //
+	    this.getAvailableSpace();
+	    this.getInstalled();
+	  }
 
-	    button.setIcon(Utils.asset('images/download3.png'));
+	  onPkgInstalled(info, storeButton)
+	  {
+	    // console.log('onPkgInstalled() ... Installed >>> ' + info.pkgId)
+
+	    info.pkgInstalled = true;
+
+	    InstalledApps.push( info );
+	    InstalledAppMap[info.pkgId] = info; // populate
+
+	    this.tag('InstalledList').addTile(InstalledApps.length - 1, info);
+
+	    // Disable STORE button - as it's uninstalled
+	    storeButton.disable();
 
 	    this.getAvailableSpace();
 	  }
 
 	  _init()
 	  {
-	    this.tag('Background')
-	      .animation({
-	        duration: 1,
-	        repeat: -1,
-	        actions: [
-	          {
-	            t: '',
-	            p: 'color',
-	            v: { 0: { v: 0xfffbb03b }, 0.5: { v: 0xfff46730 }, 0.8: { v: 0xfffbb03b } },
-	          },
-	        ],
-	      });
-	     // .start()
+	    this.storeButtonIndex     = 0;
+	    this.installedButtonIndex = 0;
 
-	      this.buttonIndex = 0;
+	    this.tag('Background').on('txLoaded', () =>
+	    {
+	      this._setState('IntroState');
+	    });
+	  }
 
-	      // Set FOCUS to 1st package
-	      //
-	      if(this.tag('PackagesList').children.length >0)
-	      {
-	        this.tag('PackagesList').children[0].setFocus = true;
-	      }
+	  handleToggleConsole()
+	  {
+	    let a = this.tag("ConsoleBG").alpha;
+	    this.tag("ConsoleBG").setSmooth('alpha', (a == 1) ? 0 : 1, {duration: 0.3});
+	  }
 
-	      this.tag('PackagesList').children.map(b =>
-	      {
-	        b.setIcon(Utils.asset('images/download3.png'));
-	      });
+	  handleGetInfoALL()
+	  {
+	    this.getInstalled();
+	  }
 
-	      this.getInstalled();
+	  handleGetInfo()
+	  {
+	    let info = InstalledApps[this.storeButtonIndex];
 
-	      this._setState('PackagesState');
+	    this.getPackageInfo(info.pkgId || info.id);
+	  }
+
+	  // GLOBAL key handling
+	  _handleKey(k)
+	  {
+	    switch( k.keyCode )
+	    {
+	      case 65:  // 'A' key on keyboard
+	      case 403: // 'A' key on remote
+	          this.handleGetInfoALL();
+	          break;
+
+	      case 67:  // 'C' key on keyboard
+	      case 405: // 'C' key on remote
+	          this.handleToggleConsole();
+	          break;
+
+	      case 73:   // 'I' key on keyboard
+	                 // 'INFO' key on remote
+	          this.handleGetInfo();
+	          break;
+	    }
+
+	    return true;
 	  }
 
 	  static _states(){
 	    return [
-
-	          // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	          class PackagesState extends this
+	          class IntroState extends this
 	          {
 	            $enter()
 	            {
-	              console.log("HANDLE PackagesState    this.buttonIndex : " + this.buttonIndex );
+	              // console.log(">>>>>>>>>>>>   STATE:  IntroState");
 
 	              var dlg = this.tag("OkCancel");
-	              dlg.setSmooth('alpha', 0, {duration: 0.3});
-	            }
+	              dlg.setSmooth('alpha', 0, {duration: 0.0});
 
-	            _handleUp()
-	            {
-	              this.tag("ConsoleBG").setSmooth('alpha', 0, {duration: 0.3});
-	            }
+	              let h1 =  (1080 + 79); // Move LOWER blind to below bottom (offscreen)
+	              let h2 = -(h1/2 + 79); // Move UPPER blins to above top    (offscreen)
 
-	            _handleDown()
-	            {
-	              this.tag("ConsoleBG").setSmooth('alpha', 1, {duration: 0.3});
-	            }
-
-	            _handleLeft()
-	            {
-	              if(--this.buttonIndex < 0) this.buttonIndex = 0;
-	            }
-
-	            _handleRight()
-	            {
-	              if(++this.buttonIndex > Inventory.length) this.buttonIndex = Inventory.length;
-	            }
-
-	            _handleBack()
-	            {
-	              this._setState('OKCStateEnter');
-	            }
-
-	            handleGetInfoALL()
-	            {
-	              console.log("GOT handleGetInfoALL() - ENTER");
-	              this.getInstalled();
-	            }
-
-	            handleGetInfo()
-	            {
-	              console.log("GOT handleGetInfo() - ENTER");
-
-	              var info = Inventory[this.buttonIndex];
-
-	              this.getPackageInfo(info.pkgId);
-	            }
-
-	            _handleKey(k)
-	            {
-	              switch( k.keyCode )
+	              const anim = this.tag('RDKlogo').animation(
 	              {
-	                case 65: this.handleGetInfoALL(); break;  // 'A' key
-	                case 73: this.handleGetInfo();    break;  // 'I' key
-	                default:
-	                  console.log("GOT key code: " + k.keyCode);
-	                    break;
+	                duration: 0.5,  delay: 1.5,
+	                actions: [ { p: 'alpha', v: { 0: 1.0, 0.5: 0.75, 1: 0.0 } } ]
+	              });
+
+	              anim.on('finish', ()=>
+	              {
+	                this.tag('Blind1' ).setSmooth('y', h2, { delay: 0.25, duration: 0.75 });
+	                this.tag('Blind2' ).setSmooth('y', h1, { delay: 0.25, duration: 0.75 });
+
+	                this._setState('SetupState');
+	              });
+
+	              anim.start();
+	            }
+	          },
+	          class SetupState extends this
+	          {
+	            fetchAppList(url)
+	            {
+	              // Fetch App List
+	              //
+	              fetch(url)
+	              .then(res => res.json())
+	              .then((apps) =>
+	              {
+	                apps.map( (o) => o.pkgInstalled = false); //default
+
+	                AvailableApps = apps;
+	                InstalledApps = apps;
+
+	                this.tag("AvailableList").tiles = AvailableApps;
+	                this.tag("InstalledList").tiles = InstalledApps;
+
+	                this._setState('StoreRowState');
+	              })
+	              .catch(err =>
+	              {
+	                console.log("Failed to get URL: " + url);
+
+	                AvailableApps = DefaultApps;
+
+	                console.log("... using DefaultApps");
+
+	                this.tag("AvailableList").tiles = AvailableApps;
+
+	                this._setState('StoreRowState');
+	              });
+	            }
+
+	            fetchThunderCfg(url)
+	            {
+	              // Fetch Thunder Cfg
+	              //
+	              fetch(url)
+	              .then( res => res.json())
+	              .then((cfg) =>
+	              {
+	                console.log(' >>> Creating CUSTOM ThunderJS ...');
+	                thunderJS$2 = thunderJS$1(cfg);
+
+	                this.getInstalled(); // <<< needs THUNDER
+	              })
+	              .catch(err =>
+	              {
+	                console.log("Failed to get URL: " + url);
+
+	                console.log(' >>> Creating DEFAULT ThunderJS ...');
+	                thunderJS$2 = thunderJS$1(thunder_cfg);
+
+	                this.getInstalled();
+
+	                console.log("... using default Thunder cfg.");
+	              });
+	            }
+
+	            $enter()
+	            {
+	              // console.log(">>>>>>>>>>>>   STATE:  SetupState");
+
+	              const URL_PARAMS = new window.URLSearchParams(window.location.search);
+	              var appURL       = URL_PARAMS.get('appList');
+	              var cfgURL       = URL_PARAMS.get('thunderCfg');
+
+	              this.fetchThunderCfg(cfgURL);
+	              this.fetchAppList(appURL);
+
+	              // State advanced within 'fetchAppList()' above.
+	            }
+	          },  //CLASS - SetupState
+	          // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	          class StoreRowState extends this
+	          {
+	            $enter()
+	            {
+	              // console.log(">>>>>>>>>>>>   STATE:  StoreRowState");
+
+	              // Set FOCUS to 1st package
+	              //
+	              var av_children = this.tag('AvailableList').children;
+	              if(av_children.length >0)
+	              {
+	                av_children[this.storeButtonIndex].setFocus = true;
 	              }
 
-	              return true;
+	              av_children.map( (o,n) => o.show(n * 0.15) );
 	            }
 
 	            _handleEnter()
 	            {
-	              progress.setSmooth('alpha', 1, {duration: .1});
+	              let info   = AvailableApps[this.storeButtonIndex];
+	              let button = this.tag('AvailableList').children[this.storeButtonIndex];
 
-	              this.fireAncestors('$buttonClicked', this.pkgId);
+	              if(info == undefined)
+	              {
+	                return // ignore
+	              }
+
+	              if(button.isEnabled() == false)
+	              {
+	                return // IGNORE CLICK
+	              }
+
+	              console.log("FIRE >>> INSTALL   pkgId:" + info.pkgId);
+
+	              button.fireAncestors('$InstallClicked', info.pkgId);
+	            }
+
+	            _handleDown()
+	            {
+	              this._setState('InstalledRowState');
+	            }
+
+	            _handleLeft()
+	            {
+	              if(--this.storeButtonIndex < 0) this.storeButtonIndex = 0;
+	            }
+
+	            _handleRight()
+	            {
+	              if(++this.storeButtonIndex > AvailableApps.length) this.storeButtonIndex = AvailableApps.length;
 	            }
 
 	            _getFocused()
 	            {
-	             //console.log("HANDLE _getFocused >>  OBJ: " + this.tag('PackagesList').children)
-
-	              return this.tag('PackagesList').children[this.buttonIndex]
+	              return this.tag('AvailableList').children[this.storeButtonIndex]
 	            }
-
 	        }, //CLASS
+
+	        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	        class InstalledRowState extends this
+	        {
+	          $enter()
+	          {
+	            // console.log(">>>>>>>>>>>>   STATE:  InstalledRowState");
+	          }
+
+	          _handleUp()
+	          {
+	            this._setState('StoreRowState');
+	          }
+
+	          _handleLeft()
+	          {
+	            if(--this.installedButtonIndex < 0) this.installedButtonIndex = 0;
+	          }
+
+	          _handleRight()
+	          {
+	            if(++this.installedButtonIndex > InstalledApps.length - 1) this.installedButtonIndex = InstalledApps.length - 1;
+	          }
+
+	          _handleEnter()
+	          {
+	            let info   = InstalledApps[this.installedButtonIndex];
+	            let button = this.tag('InstalledList').children[this.installedButtonIndex];
+
+	            console.log("FIRE >>> LAUNCH   pkgId:" + info.pkgId);
+
+	            button.fireAncestors('$LaunchClicked', info.pkgId);
+	            button.clickAnim();
+	          }
+
+	          _handleBack()
+	          {
+	            this._setState('OKCStateEnter');
+	          }
+
+	          _getFocused()
+	          {
+	            return this.tag('InstalledList').children[this.installedButtonIndex]
+	          }
+	        },//class
 	        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	        class OKCStateEnter extends this
 	        {
 	          $enter()
 	          {
-	            console.log("HANDLE OKC " );
+	            // console.log(">>>>>>>>>>>>   STATE:  OKCStateEnter");
 
-	            var pkgId = this.tag('PackagesList').children[this.buttonIndex].pkgId;
+	            var button = this.tag('InstalledList').children[this.installedButtonIndex];
 
-	            var dlg = this.tag("OkCancel");
+	            if(button == undefined || button.info == undefined)
+	            {
+	              console.error(  'BUTTON index:' + this.installedButtonIndex +'  - NOT FOUND');
+	              this.setConsole('BUTTON index:' + this.installedButtonIndex +'  - NOT FOUND');
+	              return;
+	            }
+	            var pkgId = button.info.pkgId;
+
+	            button.startWiggle();
+
+	            var dlg    = this.tag("OkCancel");
+	            dlg.pkgId  = pkgId; // needed later
+	            dlg.button = button;
 
 	            dlg.setLabel("Remove '" + pkgId + "' app ?");
 	            dlg.setSmooth('alpha', 1, {duration: 0.3});
-	           // dlg.setFocus = true;
 
 	            dlg._setState('OKCState');
 	          }
@@ -4465,13 +5103,14 @@ var APP_com_comcast_pkgDemo = (function () {
 
 	            return dlg;
 	          }
-	        }
+	        },
 	        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	      ]
 	  }//_states
 	}
 
 	function index() {
+
 	  return Launch(App, ...arguments)
 	}
 

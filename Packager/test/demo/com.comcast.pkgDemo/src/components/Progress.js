@@ -3,10 +3,8 @@ export default class Progress extends lng.Component {
     {
       let RR = lng.shaders.RoundedRectangle;
 
-      var  pts = 20;
       var  barClr1  = 0xFFcccccc;  // #ccccccFF  // Background
       var  frameClr = 0xFF666666;  // #666666FF
-      var  textClr  = 0xFFffffff;  // #ffffffFF
 
     return {
         ProgressBar: {
@@ -21,10 +19,15 @@ export default class Progress extends lng.Component {
       return this.value;
     }
 
+    reset()
+    {
+      this.value = 0;
+      this.tag("Progress").w = 0;
+    }
+
     setProgress(pc)
     {
       this.value = pc;
-      //console.log(" setProgress: " + pc)
 
       var ww = (this.w -4) * pc;
 
@@ -34,8 +37,6 @@ export default class Progress extends lng.Component {
     _init()
     {
       this.tag("Background").w = this.w;
-      this.tag("Progress").w   = 0;
-
-      this.value = 0.0;
+      this.reset();
     }
   }//CLASS

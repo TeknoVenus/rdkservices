@@ -99,7 +99,7 @@ void*                                PackagerExUtils::mData = nullptr;
 
     bool PackagerExUtils::fileRemove(const char* f)
     {
-        LOGERR(" ... Removing >>>  '%s' ", f);
+        LOGINFO(" ... Removing >>>  '%s' ", f);
 
         return ( remove (f) == 0);
     }
@@ -143,7 +143,7 @@ void*                                PackagerExUtils::mData = nullptr;
 
         closedir(dd);
 
-        // LOGERR("PackagerExUtils::folderSize( %s )  = %jd", d, total_size);
+        // LOGINFO("PackagerExUtils::folderSize( %s )  = %jd", d, total_size);
 
         return total_size;
     }
@@ -405,7 +405,7 @@ void*                                PackagerExUtils::mData = nullptr;
             }
             else
             {
-              LOGERR(" ... SQLite >> %d : %s \n", rc, "(none1)");
+              LOGINFO(" ... SQLite >> %d : %s \n", rc, "(none1)");
               // LOGERR("%d", rc);
             }
         }
@@ -479,7 +479,7 @@ void*                                PackagerExUtils::mData = nullptr;
                 }
                 else
                 {
-                    LOGERR(" ... SQLite >> %d : %s", rc, "(none2)");
+                    LOGINFO(" ... SQLite >> %d : %s", rc, "(none2)");
                     // LOGERR("%d", rc);
                 }
             }
@@ -839,7 +839,7 @@ success = true;
 
     void PackagerExUtils::showTable()
     {
-        // LOGERR(" - ENTER \n");
+        // LOGINFO(" - ENTER \n");
 
         char *zErrMsg;
         sqlite3* &db = SQLITE;
@@ -855,7 +855,7 @@ success = true;
             LOGERR("ERROR showing table ... %s", sqlite3_errmsg(db));
         }
 
-        // LOGERR(" - DONE \n");
+        // LOGINFO(" - DONE \n");
     }
 
     void PackagerExUtils::updatePkgList(PackageList_t& list)
@@ -960,7 +960,7 @@ success = true;
       int flags;
       int r;
 
-LOGERR(" ... Extracting >>>  '%s' ", filename);
+LOGINFO(" ... Extracting >>>  '%s' ", filename);
 
       // Select which attributes we want to restore. 
       flags =  ARCHIVE_EXTRACT_TIME;
@@ -1289,9 +1289,9 @@ LOGERR(" ... Extracting >>>  '%s' ", filename);
                 
             }//release the lock - scope !
 
-            LOGERR("CALLING JOB");
-            LOGERR("CALLING JOB");
-            LOGERR("CALLING JOB");
+            LOGINFO("CALLING JOB");
+            LOGINFO("CALLING JOB");
+            LOGINFO("CALLING JOB");
 //            func();
 
             // doInstall( job )

@@ -352,7 +352,7 @@ fprintf(stderr, "\nHUGH abc >>>>> ... %s()  >>>  CMD: %s", __FUNCTION__, index.C
             //
             if (index.Current().Text() == "GetAvailableSpace")
             {
-                fprintf(stderr, "\nHUGH >>>>> Call ... Pacakger::GetAvailableSpace() ... " );
+                // fprintf(stderr, "\n >>>>> Call ... Pacakger::GetAvailableSpace() ... " );
 
                 /* status = */ _implementation->GetAvailableSpace();
             }

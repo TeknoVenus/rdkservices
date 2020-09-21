@@ -29,6 +29,32 @@ lng build
 lng dist
 ```
 
+
+## Running
+
+Example usage...
+
+```http://127.0.0.1/?appList=http://127.0.0.1/AppList.json&thunderCfg=http://127.0.0.1/ThunderCfg.json```
+
+URL Paramaters -
+
+  * `appList`    ... the URL for the "App Store" inventory JSON file
+  * `thunderCfg` ... the URL for the "Thunder Frmawork" configuration JSON file
+
+Development testing used a Vagrant VM and port forwarding...
+
+          Host OS      <----->      Vagrant VM
+
+  *  Thunder / `WPEFramework` is running the VM ... providing *Packager* plugin
+
+  *  The `Demo App` is hosted on the HOST using ...
+
+      ``` http-server -p 80 -c-1 ```
+
+  *  The "App Store Inventory" is hosted on the VM, again using ...
+
+      ``` http-server -p 80 -c-1 ```
+
 ## Creative Commons / Attribution
 
 Some of the images used in this demo are CC Licensed.

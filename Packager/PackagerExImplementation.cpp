@@ -76,7 +76,7 @@ namespace Plugin {
 
     bool success = PackagerExUtils::initDB(file, STORE_KEY);
 
-    //LOGERR(" ... SQLite >> Init()  %s ", (success ? " OK" : " FAILED !"));
+    //LOGINFO(" ... SQLite >> Init()  %s ", (success ? " OK" : " FAILED !"));
 
     if(success)
     {
@@ -101,29 +101,29 @@ namespace Plugin {
       pkg->setType("DAC");
 
 
-LOGERR("########## addPkgRow \n");
+LOGINFO("########## addPkgRow \n");
   PackagerExUtils::addPkgRow(pkg);
 
     pkg->Release();
 
-LOGERR("########## hasPkgRow('TestApp0123456') == %s\n",
+LOGINFO("########## hasPkgRow('TestApp0123456') == %s\n",
       (PackagerExUtils::hasPkgRow( "TestApp0123456" ) ? "TRUE" : "FALSE") );
 
 
 
-LOGERR("########## hasPkgRow('foo') == %s\n\n",
+LOGINFO("########## hasPkgRow('foo') == %s\n\n",
       (PackagerExUtils::hasPkgRow( "foo" ) ? "TRUE" : "FALSE") );
 
 
-LOGERR("########## showTable \n\n");
+LOGINFO("########## showTable \n\n");
 PackagerExUtils::showTable();
 
 
-LOGERR("\n########## delPkgRow\n");
+LOGINFO("\n########## delPkgRow\n");
   PackagerExUtils::delPkgRow("TestApp0123456");
 
 
-LOGERR("########## NOW ? hasPkgRow('TestApp0123456') == %s\n",
+LOGINFO("########## NOW ? hasPkgRow('TestApp0123456') == %s\n",
       (PackagerExUtils::hasPkgRow( "TestApp0123456" ) ? "TRUE" : "FALSE") );
 
 #endif //00
@@ -222,7 +222,7 @@ LOGERR("########## NOW ? hasPkgRow('TestApp0123456') == %s\n",
     std::string ext = PackagerExUtils::fileExtension(install_url);
 
     snprintf(download_name, PATH_MAX, TEMPFILE_PATTERN, taskId, ext.c_str() );
-    LOGERR(" - ... Using TEMP = %s", download_name);
+    LOGINFO(" - ... Using TEMP = %s", download_name);
 
     // Is URL a JSON manifset ?
     //
@@ -353,7 +353,7 @@ JUNK_SLEEP_MS(200);
 
         strtime.pop_back();  // NOTE:  Remove trailing '\n' >> illegal in JSON
 
-        int32_t bytes = PackagerExUtils::folderSize(uuid_path);
+        uint32_t bytes = PackagerExUtils::folderSize(uuid_path);
 
         PackageInfoEx* pkg = Core::Service<PackageInfoEx>::Create<PackageInfoEx>();
 
@@ -372,7 +372,7 @@ JUNK_SLEEP_MS(200);
 JUNK_SLEEP_MS(200);
 
         NotifyIntallStep(Exchange::IPackager::INSTALLED, taskId, pkgId);
-        LOGERR(" ... COMPLETE (%s) --------------------------------------------------------\n\n\n", install_url.c_str());
+        LOGINFO(" ... COMPLETE (%s) --------------------------------------------------------\n\n\n", install_url.c_str());
     }
 
     return 0; // no error
@@ -403,11 +403,7 @@ JUNK_SLEEP_MS(200);
     }
     else
     {
-      LOGERR(" .Remove( %s ) ... NOT found", pkgId.c_str());
-
-      NotifyIntallStep(Exchange::IPackager::REMOVE_FAILED, 0, pkgId, -2);
-
-      return -1; // FAILED
+      LOGINFO(" .Remove( %s ) ... Found", pkgId.c_str());
     }
 
     return 0; // SUCCESS
@@ -451,7 +447,7 @@ JUNK_SLEEP_MS(200);
 
   PackageInfoEx* PackagerImplementation::GetPackageInfo(const string& pkgId)
   {
-    LOGERR("DEBUG:  GetPackageInfo() - ENTER" );
+    LOGINFO("DEBUG:  GetPackageInfo() - ENTER" );
 
     PackageInfoEx* pkg = PackagerExUtils::getPkgRow(pkgId);
 
@@ -467,9 +463,9 @@ JUNK_SLEEP_MS(200);
   {
     int64_t used_bytes = PackagerExUtils::sumSizeInBytes();
 
-    // LOGERR("PackagerExImplementation::GetAvailableSpace()  ... used_bytes: %jd ", used_bytes);
-    // LOGERR("PackagerExImplementation::GetAvailableSpace()  ... STORE_BYTES_QUOTA: %jd ", STORE_BYTES_QUOTA);
-    // LOGERR("PackagerExImplementation::GetAvailableSpace()  ... bytes_left: %jd ", (STORE_BYTES_QUOTA - used_bytes));
+    // LOGINFO("PackagerExImplementation::GetAvailableSpace()  ... used_bytes: %jd ", used_bytes);
+    // LOGINFO("PackagerExImplementation::GetAvailableSpace()  ... STORE_BYTES_QUOTA: %jd ", STORE_BYTES_QUOTA);
+    // LOGINFO("PackagerExImplementation::GetAvailableSpace()  ... bytes_left: %jd ", (STORE_BYTES_QUOTA - used_bytes));
 
     return ((STORE_BYTES_QUOTA - used_bytes)/1000); // in KB
   }

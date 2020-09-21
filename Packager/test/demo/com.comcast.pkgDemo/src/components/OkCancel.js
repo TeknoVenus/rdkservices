@@ -30,8 +30,8 @@ export default class OkCancel extends lng.Component {
               },
             },
 
-            OkButton:    { type: Button, label: "Ok",     mount: 0.5, x: (w => 0.25 * w), y: (h => h - 35), w: 150, h: 40 },
-            CancelButton:{ type: Button, label: "Cancel", mount: 0.5, x: (w => 0.75 * w), y: (h => h - 35), w: 150, h: 40 },
+            OkButton:    { type: Button, label: "Ok",     clrFocus: 0xFF008800, mount: 0.5, x: (w => 0.25 * w), y: (h => h - 35), w: 150, h: 40 },
+            CancelButton:{ type: Button, label: "Cancel", clrFocus: 0xFF880000, mount: 0.5, x: (w => 0.75 * w), y: (h => h - 35), w: 150, h: 40 },
         }//Dialog
       }
     };
@@ -48,7 +48,7 @@ export default class OkCancel extends lng.Component {
                         this.tag("CancelButton")
                       ];
 
-      this.buttonIndex = 0
+      this.buttonIndex = 1
 
       this.tag("Dialog").w = this.w;
       this.tag("Dialog").h = this.h;
@@ -61,8 +61,7 @@ export default class OkCancel extends lng.Component {
             {
               $enter()
               {
-                // this.setFocus = true;
-                this.tag("OkButton").setFocus = true;
+                this.tag("CancelButton").setFocus = true;
               }
 
               _handleLeft()
@@ -77,12 +76,14 @@ export default class OkCancel extends lng.Component {
 
               handleEsc()
               {
-                this.fireAncestors('$okcClickedCancel', this.pkgId);
+                this.fireAncestors('$onRemoveCANCEL', this.pkgId, false);
               }
 
-              _handleEnter()
+              _handleEnter() // could be OK or CANCEL button
               {
-                this.fireAncestors('$okcClickedOk', this.pkgId);
+                var name = (this.buttonIndex == 0) ? '$onRemoveOK' : '$onRemoveCANCEL'
+
+                this.fireAncestors(name);
               }
 
               _handleKey(k)
