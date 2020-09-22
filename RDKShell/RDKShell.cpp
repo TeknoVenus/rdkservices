@@ -2056,7 +2056,7 @@ namespace WPEFramework {
                     LOGINFO("IsInstalled returned %s", strResult.c_str());
                     // ----- DEBUG ----------
 
-                    if (installResult.Get("available").Number() == 0)
+                    if (!installResult.Get("available").Boolean())
                     {
                         response["message"] = "Packager reports app is not installed";
                         returnResponse(false);
