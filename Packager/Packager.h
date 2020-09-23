@@ -159,7 +159,7 @@ namespace {
                 uint32_t rc = this->_implementation->Remove(params.PkgId.Value(), params.Listener.Value());
 
                 response["task"]   = 123; // TODO ... (rc > 0) ? std::to_string( rc ) : "Remove Failed";
-                response["result"] = (rc > 0) ? "false" : "true"; // '0' is success
+                response["result"] = (rc > 0) ? false : true; // '0' is success
 
                 return rc;
             });
@@ -183,7 +183,7 @@ namespace {
                 uint32_t result = Core::ERROR_NONE;
                 uint32_t ans    = this->_implementation->IsInstalled(params.PkgId.Value());
 
-                response["available"] = ans ? "true" : "false";
+                response["available"] = ans ? true : false;
 
                 return result;
             });
