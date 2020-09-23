@@ -728,15 +728,28 @@ namespace WPEFramework {
                 // If success is false, the container isn't running so nothing to do
                 if (result["success"].Boolean())
                 {
+                    auto containerInfo = result["info"].Object();
+
                     // Dobby knows about that container - what's it doing?
-                    if (result["state"] == "Running" || result["state"] == "Starting")
+                    if (containerInfo["state"] == "running" || containerInfo["state"] == "starting")
                     {
                         ociContainerPlugin->Invoke<JsonObject, JsonObject>(2000, "stopContainer", param, result);
+                    }
+                    else if (containerInfo["state"] == "paused")
+                    {
+                        // Paused, so force stop
+                        param["force"] = true;
+                        ociContainerPlugin->Invoke<JsonObject, JsonObject>(2000, "stopContainer", param, result);
+                    }
+                    else
+                    {
+                        response["message"] = "Container is not in a state that can be stopped";
+                        returnResponse(false);
+                    }
 
-                        if (!result["success"].Boolean())
-                        {
-                            result["message"] = "Failed to stop container";
-                        }
+                    if (!result["success"].Boolean())
+                    {
+                        response["message"] = "Failed to stop container";
                     }
                 }
             }
